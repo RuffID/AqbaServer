@@ -1,0 +1,14 @@
+﻿using AqbaServer.Models.OkdeskEntities;
+
+namespace AqbaServer.Interfaces.OkdeskEntities
+{
+    public interface IKindRepository
+    {
+        Task<bool> CreateKind(Kind kind);
+        Task<bool> DeleteKind(int kindId);
+        Task<Kind> GetKind(string kindCode);
+        Task<ICollection<Kind>> GetKinds();
+        Task<bool> GetKindsFromOkdesk();
+        Task<bool> UpdateKind(string kindCode, Kind kind);
+    }
+}
