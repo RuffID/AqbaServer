@@ -8,7 +8,8 @@ namespace AqbaServer.Interfaces.OkdeskEntities
         Task<Company?> GetCompany(int companyId);
         Task<int?> GetLastCompanyId();
         Task<ICollection<Company>?> GetCompanies(int companyId);
-        Task<bool> GetCompaniesFromOkdesk(int lastCompanyId = 0);
+        Task<bool> GetCompanyFromOkdesk(int companyId);
+        Task<bool> GetCompaniesFromOkdesk(int lastCompanyId = 0, int pageSize = 100);
         Task<bool> CreateCompany(int categoryId, Company companyMap);
         Task<bool> UpdateCompany(int categoryId, Company company);
         Task<bool> DeleteCompany(int companyId);

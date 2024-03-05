@@ -123,12 +123,6 @@ namespace AqbaServer.Controllers.OkdeskEntities
 
             var equipmentMap = _mapper.Map<Equipment>(equipmentCreate);
 
-            /*var kind = await _kindRepository.GetKind(kindCode);
-            equipmentMap.Equipment_kind = kind;
-            var manufacturer = await _manufacturerRepository.GetManufacturer(manufacturerCode);
-            equipmentMap.Equipment_manufacturer = manufacturer;
-            var model = await _modelRepository.GetModel(modelCode);
-            equipmentMap.Equipment_model = model;*/
             var company = await _companyRepository.GetCompany(companyId);
             equipmentMap.Company = company;
             var maintenanceEntity = await _maintenanceEntityRepository.GetMaintenanceEntity(maintenanceEntityId);
@@ -168,16 +162,7 @@ namespace AqbaServer.Controllers.OkdeskEntities
 
             if (await _equipmentRepository.GetEquipment(equipmentId) == null)
                 return NotFound();
-
-            /*var kind = await _kindRepository.GetKind(kindCode);
-            var manufacturer = await _manufacturerRepository.GetManufacturer(manufacturerCode);
-            var model = await _modelRepository.GetModel(modelCode);            
-
-            if (kind == null || manufacturer == null || model == null || company == null)
-                return NotFound();
-
-            if (maintenanceEntity == null)
-                return NotFound();*/
+            
             var company = await _companyRepository.GetCompany(companyId);
             var maintenanceEntity = await _maintenanceEntityRepository.GetMaintenanceEntity(maintenanceEntityId);
 
@@ -185,10 +170,7 @@ namespace AqbaServer.Controllers.OkdeskEntities
                 return BadRequest();
 
             var equipmentMap = _mapper.Map<Equipment>(updatedEquipment);
-
-            /*equipmentMap.Equipment_kind = kind;
-            equipmentMap.Equipment_manufacturer = manufacturer;
-            equipmentMap.Equipment_model = model;*/
+            
             equipmentMap.Company = company;
             equipmentMap.Maintenance_entity = maintenanceEntity;
 

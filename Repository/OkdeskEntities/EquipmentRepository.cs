@@ -138,7 +138,7 @@ namespace AqbaServer.Repository.OkdeskEntities
         }
 
         public async Task<bool> UpdateEquipment(int equipmentId, Equipment equipment)
-        {            
+        {
             var kind = await _kindRepository.GetKind(equipment?.Equipment_kind?.Code);
             equipment.Equipment_kind = kind;
             var manufacturer = await _manufacturerRepository.GetManufacturer(equipment?.Equipment_manufacturer?.Code);

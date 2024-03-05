@@ -36,12 +36,22 @@ namespace AqbaServer.Repository.OkdeskEntities
         {
             return await DBSelect.SelectCompaniesByCategory(categoryId, companyId);
         }
+        
+        public async Task<bool> GetCompanyFromOkdesk(int companyId)
+        {
+            var company = await Request.GetСompany(companyId);
+            if (company == null) return false;
+            if (!await UpdateCompany(companyId, company)) 
+                return false;
+            else 
+                return true;
+        }
 
-        public async Task<bool> GetCompaniesFromOkdesk(int lastCompanyId = 0)
+        public async Task<bool> GetCompaniesFromOkdesk(int lastCompanyId = 0, int pageSize = 100)
         {
             var categories = await _categoryRepository.GetCategories();
             if (categories == null) return false;
-            var companies = await OkdeskEntitiesRequest.GetCompanies(categories, lastCompanyId);
+            var companies = await OkdeskEntitiesRequest.GetCompanies(categories, pageSize, lastCompanyId);
             if (companies == null) return false;
 
             foreach (var company in companies)
@@ -63,9 +73,9 @@ namespace AqbaServer.Repository.OkdeskEntities
             return await DBSelect.SelectCompany(companyId);
         }
 
-        public async Task<bool> UpdateCompany(int categoryId, Company company)
+        public async Task<bool> UpdateCompany(int companyId, Company company)
         {
-            return await DBUpdate.UpdateCompany(categoryId, company);
+            return await DBUpdate.UpdateCompany(companyId, company);
         }
     }
 }

@@ -68,7 +68,7 @@ namespace AqbaServer.Data
             try
             {
                 await connection.OpenAsync();
-                ICollection<Company> Companies = new List<Company>();
+                ICollection<Company> Companies = [];
                 Company company;
                 string sqlCommand = string.Format(
                     "SELECT company.id, company.name, company.additional_name, company.active, company.categoryId, company_category.color " +
@@ -126,7 +126,11 @@ namespace AqbaServer.Data
             {
                 await connection.OpenAsync();
                 Company company;
-                string sqlCommand = $"SELECT * FROM company WHERE id = {companyId}";
+                string sqlCommand = string.Format(
+                    "SELECT company.id, company.name, company.additional_name, company.active, company.categoryId, company_category.color " +
+                    "FROM company " +
+                    "JOIN company_category ON company.categoryId = company_category.id " +
+                    "WHERE company.id = {0}", companyId);
 
                 // Создать объект Command.
                 MySqlCommand cmd = new()
@@ -150,6 +154,8 @@ namespace AqbaServer.Data
                         company.Active = Convert.ToBoolean(reader["active"]);
                     if (!reader.IsDBNull(reader.GetOrdinal("categoryId")))
                         company.Category.Id = Convert.ToInt32(reader["categoryId"]);
+                    if (!reader.IsDBNull(reader.GetOrdinal("color")))
+                        company.Category.Color = reader["color"].ToString();
 
                     return company;
                 }

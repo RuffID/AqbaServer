@@ -67,6 +67,9 @@ namespace AqbaServer.Data
                 cmd.Parameters.Add("@name", MySqlDbType.String).Value = company.Name;
                 cmd.Parameters.Add("@additional_name", MySqlDbType.String).Value = company.AdditionalName;
                 cmd.Parameters.Add("@active", MySqlDbType.Bit).Value = company.Active;
+                if (company?.Category?.Id == null)
+                    if (company?.Category == null)
+                        company.Category = new();
                 cmd.Parameters.Add("@categoryId", MySqlDbType.Int32).Value = company?.Category?.Id;
                 await cmd.ExecuteNonQueryAsync();
 

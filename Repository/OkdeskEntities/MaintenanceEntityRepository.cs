@@ -27,9 +27,9 @@ namespace AqbaServer.Repository.OkdeskEntities
             return await DBSelect.SelectLastMaintenanceEntity();
         }
 
-        public async Task<bool> GetMaintenanceEntitiesFromOkdesk(int maintenanceEntityId = 0)
+        public async Task<bool> GetMaintenanceEntitiesFromOkdesk(int maintenanceEntityId = 0, int pageSize = 100)
         {
-            var maintenanceEntities = await OkdeskEntitiesRequest.GetMaintenanceEntities(maintenanceEntityId);
+            var maintenanceEntities = await OkdeskEntitiesRequest.GetMaintenanceEntities(pageSize, maintenanceEntityId);
             if (maintenanceEntities == null) return false;
 
             foreach (var maintenanceEntity in maintenanceEntities)

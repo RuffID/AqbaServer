@@ -12,10 +12,10 @@ namespace AqbaServer.Services
         }
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            if (!await Request.Login(Immutable.OkdeskLoginLink, Immutable.OkdeskContentForLoginOnSite))
-            {
+            await Request.Login(Immutable.OkdeskLoginLink, Immutable.OkdeskContentForLoginOnSite);
+            /*{
                 _appLifetime.StopApplication();
-            }
+            }*/
             //await Request.Login(Immutable.PartnersLink, Immutable.PartnersContentForLoginOnSite);
         }
     }

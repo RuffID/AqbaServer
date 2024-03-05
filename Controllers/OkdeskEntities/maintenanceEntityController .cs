@@ -24,7 +24,7 @@ namespace AqbaServer.Controllers.OkdeskEntities
             _mapper = mapper;
         }
 
-        [HttpGet]
+        [HttpGet("list")]
         [ProducesResponseType(200, Type = typeof(IEnumerable<MaintenanceEntity>))]
         [ProducesResponseType(400)]
         public async Task<IActionResult> GetMaintenanceEntities([FromQuery] int maintenanceEntityId)
@@ -40,11 +40,18 @@ namespace AqbaServer.Controllers.OkdeskEntities
             return Ok(maintenanceEntities);
         }
 
-        [HttpGet("{maintenanceEntityId}")]
+        [HttpGet]
         [ProducesResponseType(200, Type = typeof(MaintenanceEntity))]
         [ProducesResponseType(400)]
-        public async Task<IActionResult> GetMaintenanceEntitiy(int maintenanceEntityId)
+        [ProducesResponseType(500)]
+        public async Task<IActionResult> GetMaintenanceEntitiy([FromQuery] int maintenanceEntityId)
         {
+            if (!await _maintenanceEntityRepository.GetMaintenanceEntitiesFromOkdesk(maintenanceEntityId, pageSize: 1))
+            {
+                ModelState.AddModelError("", "Something went wrong when retrieving maintenance entity from okdesk");
+                return StatusCode(500, ModelState);
+            }
+
             var maintenanceEntity = _mapper.Map<MaintenanceEntityDto>(await _maintenanceEntityRepository.GetMaintenanceEntity(maintenanceEntityId));
 
             if (maintenanceEntity == null)

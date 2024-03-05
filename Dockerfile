@@ -1,17 +1,17 @@
 #See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-USER app
+USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["Server/AqbaServer.csproj", "Server/"]
-RUN dotnet restore "./Server/AqbaServer.csproj"
+COPY ["AqbaServerASPNetCore/AqbaServer.csproj", "AqbaServerASPNetCore/"]
+RUN dotnet restore "./AqbaServerASPNetCore/AqbaServer.csproj"
 COPY . .
-WORKDIR "/src/Server"
+WORKDIR "/src/AqbaServerASPNetCore"
 RUN dotnet build "./AqbaServer.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish

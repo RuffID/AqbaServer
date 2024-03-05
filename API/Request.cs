@@ -29,16 +29,15 @@ namespace AqbaServer.API
             };
         }
 
-        public static async Task<Company[]?> GetСompanies(int lastCompanyId, long companyCategoryId)
+        public static async Task<Company[]?> GetСompanies(int lastCompanyId, long companyCategoryId, int pageSize = 100)
         {
-            string link = $"{Immutable.OkdeskApiLink}/companies/list?api_token={Config.OkdeskApiToken}&page[from_id]={lastCompanyId}&page[direction]=forward&category_ids[]={companyCategoryId}";
+            string link = $"{Immutable.OkdeskApiLink}/companies/list?api_token={Config.OkdeskApiToken}&page[from_id]={lastCompanyId}&page[direction]=forward&category_ids[]={companyCategoryId}&page[size]={pageSize}";
             var response = await SendApiRequest(link);
             if (string.IsNullOrEmpty(response) || response == "[]")
                 return null;
 
             try
             {
-
                 return JsonConvert.DeserializeObject<Company[]>(response);
             }
             catch (Exception e)
@@ -46,12 +45,29 @@ namespace AqbaServer.API
                 WriteLog.Error(e.ToString());
                 return null;
             }
-
         }
 
-        public static async Task<MaintenanceEntity[]?> GetMaintenanceEntities(int lastMaintenanceEntitiesId)
+        public static async Task<Company?> GetСompany(int companyId)
         {
-            string link = $"{Immutable.OkdeskApiLink}/maintenance_entities/list?api_token={Config.OkdeskApiToken}&page[from_id]={lastMaintenanceEntitiesId}&page[direction]=forward";
+            string link = $"{Immutable.OkdeskApiLink}/companies?api_token={Config.OkdeskApiToken}&id={companyId}";
+            var response = await SendApiRequest(link);
+            if (string.IsNullOrEmpty(response) || response == "[]")
+                return null;
+
+            try
+            {
+                return JsonConvert.DeserializeObject<Company>(response);
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return null;
+            }
+        }
+
+        public static async Task<MaintenanceEntity[]?> GetMaintenanceEntities(int lastMaintenanceEntitiesId, int pageSize = 100)
+        {
+            string link = $"{Immutable.OkdeskApiLink}/maintenance_entities/list?api_token={Config.OkdeskApiToken}&page[from_id]={lastMaintenanceEntitiesId}&page[direction]=forward&page[size]={pageSize}";
             var response = await SendApiRequest(link);
             if (string.IsNullOrEmpty(response) || response == "[]")
                 return null;

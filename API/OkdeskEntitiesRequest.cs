@@ -4,9 +4,9 @@ namespace AqbaServer.API
 {
     public static class OkdeskEntitiesRequest
     {
-        public static async Task<ICollection<Company>> GetCompanies(ICollection<Category> categories, int lastCompanyId = 0)
+        public static async Task<List<Company>> GetCompanies(ICollection<Category> categories, int pageSize, int lastCompanyId = 0)
         {
-            ICollection<Company> companies = new List<Company>();
+            List<Company> companies = [];
 
             Company[]? response;
 
@@ -15,7 +15,7 @@ namespace AqbaServer.API
                 while (true)
                 {
                     // Получение списка компаний через API
-                    response = await Request.GetСompanies(lastCompanyId, Convert.ToInt32(category.Id));
+                    response = await Request.GetСompanies(lastCompanyId, Convert.ToInt32(category.Id), pageSize);
 
                     // Если список компаний не пуст, то находит id последнего клиента чтобы в следующей итерации получить следующие 100 компаний
                     if (response?.Length > 0)
@@ -37,9 +37,9 @@ namespace AqbaServer.API
             return companies;
         }
 
-        public static async Task<ICollection<MaintenanceEntity>> GetMaintenanceEntities(int lastMaintenanceEntitiesId = 0)
+        public static async Task<ICollection<MaintenanceEntity>> GetMaintenanceEntities(int pageSize, int lastMaintenanceEntitiesId = 0)
         {
-            List<MaintenanceEntity> maintenanceEntities = new();
+            List<MaintenanceEntity> maintenanceEntities = [];
             MaintenanceEntity[]? response;
 
             while (true)
@@ -47,13 +47,15 @@ namespace AqbaServer.API
                 if (maintenanceEntities.Count > 0)
                     lastMaintenanceEntitiesId = maintenanceEntities[^1].Id + 1;
 
-                response = await Request.GetMaintenanceEntities(lastMaintenanceEntitiesId);
+                response = await Request.GetMaintenanceEntities(lastMaintenanceEntitiesId, pageSize);
 
                 if (response == null || response.Length <= 0)
                     break;
                 else
                     foreach (var obj in response)
                         maintenanceEntities.Add(obj);
+
+                if (pageSize == 1) break;
             }
             return maintenanceEntities;
         }
@@ -86,7 +88,7 @@ namespace AqbaServer.API
 
         public static async Task<ICollection<Manufacturer>> GetManufacturers()
         {
-            List<Manufacturer> manufacturers = new();
+            List<Manufacturer> manufacturers = [];
 
             long lastManufacturerId = 0;
             Manufacturer[]? responseManufacturers;
@@ -109,7 +111,7 @@ namespace AqbaServer.API
 
         public static async Task<ICollection<Model>> GetModels()
         {
-            List<Model> models = new ();
+            List<Model> models = [];
 
             long lastEquipmentParameterId = 0;
             Model[]? responseEquipmentParameter;
@@ -132,7 +134,7 @@ namespace AqbaServer.API
 
         public static async Task<ICollection<Kind>> GetKinds()
         {
-            List<Kind> kinds = new();
+            List<Kind> kinds = [];
 
             long lastKindId = 0;
             Kind[]? responseKinds;
@@ -155,28 +157,28 @@ namespace AqbaServer.API
 
         public static ICollection<Category> GetCategories()
         {
-            ICollection<Category> categories = new List<Category>()
-            {
-                new Category(0, "#FFFFFF"),
-                new Category(1, "#FFEE00"),
-                new Category(2, "#00FF00"),
-                new Category(3, "#FF0000"),
-                new Category(4, "#FF00D5"),
-                new Category(5, "#000000"),
-                new Category(6, "#5CB85C"),
-                new Category(7, "#D3F720"),
-                new Category(8, "#6C89EB"),
-                new Category(9, "#08C7F7"),
-                new Category(10, "#0011FF"),
-                new Category(11, "#9E9E9E"),
-                new Category(12, "#FF7300")
-            };
+            ICollection<Category> categories =
+            [
+                new(0, "#FFFFFF"),
+                new(1, "#FFEE00"),
+                new(2, "#00FF00"),
+                new(3, "#FF0000"),
+                new(4, "#FF00D5"),
+                new(5, "#000000"),
+                new(6, "#5CB85C"),
+                new(7, "#D3F720"),
+                new(8, "#6C89EB"),
+                new(9, "#08C7F7"),
+                new(10, "#0011FF"),
+                new(11, "#9E9E9E"),
+                new(12, "#FF7300")
+            ];
             return categories;
         }
 
         public static async Task<ICollection<Employee>> GetEmployees()
         {
-            List<Employee> employees = new();
+            List<Employee> employees = [];
 
             long lastEmployeeId = 0;
             Employee[]? responseEmployees;

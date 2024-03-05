@@ -45,10 +45,16 @@ namespace AqbaServer.Controllers.OkdeskEntities
         [ProducesResponseType(400)]
         public async Task<IActionResult> GetCompany([FromQuery] int companyId)
         {
+            if (!await _companyRepository.GetCompanyFromOkdesk(companyId))
+            {
+                ModelState.AddModelError("", "Something went wrong when retrieving company from okdesk");
+                return StatusCode(500, ModelState);
+            }
+
             var company = _mapper.Map<CompanyDto>(await _companyRepository.GetCompany(companyId));
 
             if (company == null)
-                return NotFound();
+                return NotFound("Company not found");
 
 
             if (!ModelState.IsValid)
