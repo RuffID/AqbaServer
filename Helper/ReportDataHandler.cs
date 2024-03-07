@@ -73,7 +73,7 @@ namespace AqbaServer.Helper
 
         static void SaveReportResults(string rawData, List<Employee> employees) // Поиск и запись данных в класс
         {
-            if (matchesEmployees?.Count > 0)  // Если найден хотя бы один сотрудник, то записываем данные
+            if (matchesEmployees != null && matchesEmployees?.Count > 0)  // Если найден хотя бы один сотрудник, то записываем данные
             {
                 for (int i = 0; i < matchesEmployees.Count; i++)    // Проход по всем сотрудником и запись данных
                 {
@@ -105,9 +105,21 @@ namespace AqbaServer.Helper
                                 else if (AmountOfTimeWrittenOfRegex().IsMatch(matchesValues[i].ToString()))
                                 {
                                     SaveCountPage(currentTimePage, TimeCurrentPageRegex(), PagesCountPerReportTimePageRegex(), ref matchesPagesTimeCount, rawData);
-                                    var spentedHours = Convert.ToInt32(matchesValues[i].Groups[1].ToString());
-                                    var spentedMinutes = Convert.ToInt32(matchesValues[i].Groups[2].ToString());
-                                    currentEmployee.SpentedTimeDouble = spentedHours + ((double)spentedMinutes / 60);
+
+                                    string tempH = matchesValues[i].Groups[1].ToString();
+                                    string tempM = matchesValues[i].Groups[2].ToString();
+                                    int spentedHours = 0;
+                                    int spentedMinutes = 0;
+
+                                    if (!string.IsNullOrEmpty(tempH))
+                                        spentedHours = Convert.ToInt32(tempH);
+
+                                    if (!string.IsNullOrEmpty(tempM))
+                                        spentedMinutes = Convert.ToInt32(tempM);
+                                    
+                                    if (spentedHours > 0 || spentedMinutes > 0)
+                                        currentEmployee.SpentedTimeDouble = spentedHours + ((double)spentedMinutes / 60);
+
                                     break;
                                 }
                             }
