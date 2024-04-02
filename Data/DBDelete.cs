@@ -1,5 +1,5 @@
 ﻿using AqbaServer.Helper;
-using AqbaServer.Models.OkdeskEntities;
+using AqbaServer.Models.OkdeskPerformance;
 using MySql.Data.MySqlClient;
 using System.Data.Common;
 

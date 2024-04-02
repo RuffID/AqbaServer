@@ -12,7 +12,13 @@ namespace AqbaServer.Services
         }
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            await Request.Login(Immutable.OkdeskLoginLink, Immutable.OkdeskContentForLoginOnSite);
+            if (!string.IsNullOrEmpty(Config.OkdeskDomainLink))
+            {
+                WriteLog.Info($"[Login method] Okdesk domain link: {Config.OkdeskDomainLink}");
+                await Request.Login(Immutable.OkdeskLoginLink, Immutable.OkdeskContentForLoginOnSite);
+            }
+            else
+                WriteLog.Error("Please fill out the config to get started. The domain address is missing.");
             /*{
                 _appLifetime.StopApplication();
             }*/

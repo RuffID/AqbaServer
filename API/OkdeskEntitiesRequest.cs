@@ -1,4 +1,4 @@
-﻿using AqbaServer.Models.OkdeskEntities;
+﻿using AqbaServer.Models.OkdeskPerformance;
 
 namespace AqbaServer.API
 {
@@ -25,12 +25,18 @@ namespace AqbaServer.API
                     if (response == null || response.Length <= 0)
                         break;
                     else
+                    {
                         // Если получен не пустой список, то добавляет поочерёдно каждую компанию в список
                         foreach (var company in response)
                         {
                             company.Category = category;
                             companies.Add(company);
                         }
+
+                        // Если в ответе получено меньше максимального количества компаний то завершает цикл, чтобы не посылать лишний запрос
+                        if (response.Length < pageSize)
+                            break;
+                    }
                 }
                 lastCompanyId = 0;
             }
@@ -197,6 +203,6 @@ namespace AqbaServer.API
                         employees.Add(equip);
             }
             return employees;
-        }
+        }        
     }
 }

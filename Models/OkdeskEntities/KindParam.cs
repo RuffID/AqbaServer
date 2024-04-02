@@ -1,4 +1,4 @@
-﻿namespace AqbaServer.Models.OkdeskEntities
+﻿namespace AqbaServer.Models.OkdeskPerformance
 {
     // Класс создан для управления таблицей many-to-many в бд
     public class KindParam

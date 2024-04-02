@@ -8,7 +8,14 @@ namespace AqbaServer.Authorization
     {
         public const string ISSUER = "AqbaServer"; // издатель токена
         public const string AUDIENCE = "AqbaClient"; // потребитель токена
-        public static SymmetricSecurityKey GetSymmetricSecurityKey() =>
-            new(Encoding.UTF8.GetBytes(Config.JwtKey));
+        public static SymmetricSecurityKey? GetSymmetricSecurityKey()
+        {
+            if (string.IsNullOrEmpty(Config.JwtKey))
+            {
+                WriteLog.Error("Please fill out the config to get started. JWT key is missing.");
+                return null;
+            }
+            return new(Encoding.UTF8.GetBytes(Config.JwtKey));
+        }
     }
 }

@@ -1,5 +1,5 @@
 ﻿using System.Text.RegularExpressions;
-using AqbaServer.Models.OkdeskEntities;
+using AqbaServer.Models.OkdeskPerformance;
 
 namespace AqbaServer.Helper
 {
@@ -79,20 +79,21 @@ namespace AqbaServer.Helper
                 {
                     try
                     {
-                        List<Employee> employeesWithTheSameLastName;    // Список найденных сотрудников
+                        List<Employee>? employeesWithTheSameLastName;    // Список найденных сотрудников
                         // Находит всех сотрудников с совпадением по фамилии и записывает в list
-                        employeesWithTheSameLastName = employees.FindAll(x => x.Last_name.Contains(matchesEmployees[i].Groups[1].ToString()));
+                        employeesWithTheSameLastName = employees?.FindAll(x => x.Last_name.Contains(matchesEmployees[i].Groups[1].ToString()));
 
-                        for (int j = 0; j < employeesWithTheSameLastName.Count; j++)    // Проходит по списку найденных сотрудников по фамилии
+                        for (int j = 0; j < employeesWithTheSameLastName?.Count; j++)    // Проходит по списку найденных сотрудников по фамилии
                         {
                             // Сравнивает имя и если оно совпадает со списком в базе, то сохраняет значение,
                             // нужно для моментов, когда есть сотрудники с похожими фамилиями
-                            Employee currentEmployee;
+                            Employee? currentEmployee;
                             // Находит по совпадению в имени чтобы не было ошибочных присваиваний и записывает ссылку на сотрудника
                             currentEmployee = employeesWithTheSameLastName.Find(x => x.First_name.Contains(matchesEmployees[i].Groups[2].ToString()));
 
                             if (currentEmployee != null)
                             {
+                                if (matchesValues == null || matchesValues.Count == 0) continue;
                                 // Если на страничке есть совпадения по решённым задачам, то записывает их в сотрудника
                                 if (NumberOfSolvedTasksRegex().IsMatch(matchesValues[i].ToString()))
                                 {
@@ -105,6 +106,8 @@ namespace AqbaServer.Helper
                                 else if (AmountOfTimeWrittenOfRegex().IsMatch(matchesValues[i].ToString()))
                                 {
                                     SaveCountPage(currentTimePage, TimeCurrentPageRegex(), PagesCountPerReportTimePageRegex(), ref matchesPagesTimeCount, rawData);
+
+                                    if (matchesValues?.Count < i || matchesValues?[i] == null) break;
 
                                     string tempH = matchesValues[i].Groups[1].ToString();
                                     string tempM = matchesValues[i].Groups[2].ToString();

@@ -1,5 +1,5 @@
 ﻿using AqbaServer.Dto;
-using AqbaServer.Interfaces.OkdeskEntities;
+using AqbaServer.Interfaces.OkdeskPerformance;
 using AqbaServer.Models.Authorization;
 using AqbaServer.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -56,8 +56,8 @@ namespace AqbaServer.Controllers.OkdeskEntities
 
                     if (dateTo >= today)
                     {
-                        await _employeePerformanceRepository.GetEmployeePerformanceFromOkdesk(DateTime.Now, DateTime.Now);
                         ThirtyMinutesReportService.TimeOfLastReportReceived = DateTime.UtcNow;
+                        _ = _employeePerformanceRepository.GetEmployeePerformanceFromOkdesk(DateTime.Now, DateTime.Now);
                     }
                 }
             }
@@ -70,6 +70,15 @@ namespace AqbaServer.Controllers.OkdeskEntities
             }
 
             return Ok(employees);
+        }
+
+        [HttpGet("time")]
+        [ProducesResponseType(200, Type = typeof(DateTime))]
+        [ProducesResponseType(400)]
+        public IActionResult GetTimeOfLastReportReceived()
+        {
+            // Возвращает время последнего обновления 
+            return Ok(ThirtyMinutesReportService.TimeOfLastReportReceived.ToLocalTime());
         }
     }
 }

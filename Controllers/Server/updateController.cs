@@ -1,8 +1,10 @@
-﻿using AqbaServer.Interfaces.Service;
+﻿using AqbaServer.Helper;
+using AqbaServer.Interfaces.Service;
 using AqbaServer.Models.Authorization;
 using AqbaServer.Models.Server;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.IO;
 
 namespace AqbaServer.Controllers.Server
 {
@@ -25,7 +27,10 @@ namespace AqbaServer.Controllers.Server
             if (file == null)
                 return BadRequest("Не передан файл");
 
-            var fileName = await _manageImage.UploadFile("Update\\Client", file);
+            if (!Directory.Exists("Update"))
+                Directory.CreateDirectory("Update");
+
+            var fileName = await _manageImage.UploadFile("Update", file);
 
             if (string.IsNullOrEmpty(fileName))
                 return StatusCode(500, "Ошибка при загрузке файла");
@@ -39,13 +44,20 @@ namespace AqbaServer.Controllers.Server
         public IActionResult DownloadFile()
         {
             string fileName = "AqbaApp.exe";
-            if (string.IsNullOrEmpty(fileName))
-                return BadRequest("Не передано имя файла");
+            string directory = "Update";
+            WriteLog.Info($"Starting download - {fileName}");
 
-            var result = _manageImage.DownloadFile("Update\\Client", fileName);
+            if (!Directory.Exists(directory))
+                Directory.CreateDirectory(directory);
+
+            var result = _manageImage.DownloadFile(directory, fileName);
+            string message = $"[Download update method] Content type: {result.Item2}, file name: {result.Item2}, filestream: {result.Item1?.ToString()}";            
 
             if (result.Item1 == null || string.IsNullOrEmpty(result.Item2) || string.IsNullOrEmpty(result.Item3))
+            {
+                WriteLog.Info(message);
                 return StatusCode(500, "Ошибка при скачивании файла");
+            }
 
             return File(result.Item1, result.Item2, result.Item3);
         }

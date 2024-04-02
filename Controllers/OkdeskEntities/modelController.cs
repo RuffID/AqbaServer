@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using AqbaServer.Models;
 using Microsoft.AspNetCore.Mvc;
-using AqbaServer.Models.OkdeskEntities;
+using AqbaServer.Models.OkdeskPerformance;
 using AqbaServer.Interfaces.OkdeskEntities;
 using Microsoft.AspNetCore.Authorization;
 using AqbaServer.Models.Authorization;

@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace AqbaServer.Models.OkdeskEntities
+namespace AqbaServer.Models.OkdeskPerformance
 {
     public class MaintenanceEntity
     {

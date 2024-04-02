@@ -1,9 +1,10 @@
-﻿using AqbaServer.Models.OkdeskEntities;
+﻿using AqbaServer.Models.OkdeskPerformance;
 using Newtonsoft.Json;
 using System.Net;
 using System.Text;
 using AqbaServer.Helper;
 using AqbaServer.Models.OkdeskReport;
+using AqbaServer.Dto;
 
 namespace AqbaServer.API
 {
@@ -219,49 +220,52 @@ namespace AqbaServer.API
             return true;
         }
 
-        public static async Task GetReportOpenTasks(ICollection<Employee> employees, ICollection<Status> statuses, ICollection<TaskType> types)    // Получение списка открытых заявок
+        */
+
+        public static async Task<Issue[]?> GetReportOpenTasks(ICollection<Employee> employees)    // Получение списка открытых заявок
         {
             StringBuilder linkOpenTasks = new();
-            int[]? numberOfTasks = null;
+            int pageNumber;
 
-            foreach (var employee in employees)
+            foreach (var employee in employees.Where(e => e.Active))
             {
-                linkOpenTasks.Clear();
-                linkOpenTasks.Append($"{Immutable.OkdeskApiLink}/issues/count?api_token={Config.OkdeskApiToken}");
-
-                foreach (var status in statuses)
-                    if (status.IsChecked == true)
-                        linkOpenTasks.Append($"&status[]={status.Code}");
-
-                foreach (var type in types)
-                    if (type.IsChecked == true)
-                        linkOpenTasks.Append($"&type[]={type.Code}");
-
-                linkOpenTasks.Append($"&assignee_ids[]={employee.Id}");
-
-                var responseOpen = await GetResponse(linkOpenTasks.ToString());
-                if (!string.IsNullOrEmpty(responseOpen) || responseOpen != "[]")
+                employee.Issues = [];
+                pageNumber = 1;
+                while (true)
                 {
-                    try
-                    {
-                        numberOfTasks = JsonConvert.DeserializeObject<int[]>(responseOpen);
-                    }
-                    catch (Exception e) { WriteLog.Error(e.ToString()); }
+                    linkOpenTasks.Clear();
+                    linkOpenTasks.Append($"{Immutable.OkdeskApiLink}/issues/list?api_token={Config.OkdeskApiToken}");
 
-                    if (numberOfTasks?.Length == 0 || numberOfTasks?.Length == null)
-                        employee.OpenTasks = 0;
-                    else
-                    {
-                        employee.OpenTasks = numberOfTasks.Length;
-                        employee.IsSelected = true;
-                    }
+                    linkOpenTasks.Append($"&assignee_ids[]={employee.Id}");
+                    linkOpenTasks.Append($"&page[number]={pageNumber}");
+                    linkOpenTasks.Append("&page[size]=50");
+                    linkOpenTasks.Append("&status_codes_not[]=completed"); // Код открытых заявок
+                    linkOpenTasks.Append("&status_codes_not[]=closed");   // Принятые заявки
 
-                    numberOfTasks = null;
+
+                    var responseOpen = await SendApiRequest(linkOpenTasks.ToString());
+                    if (!string.IsNullOrEmpty(responseOpen) && responseOpen != "[]")
+                    {
+                        try
+                        {
+                            Issue[]? list = JsonConvert.DeserializeObject<Issue[]>(responseOpen);                            
+
+                            if (list != null || list?.Length > 0)
+                            {
+                                employee.Issues.AddRange( list );
+                                pageNumber++;
+
+                                if (list?.Length < 50)
+                                    break;
+                            }                            
+                        }
+                        catch (Exception e) { WriteLog.Error(e.ToString()); break; }
+                    }
+                    else break;
                 }
-                else
-                    employee.OpenTasks = 0;
             }
-        }*/
+            return null;
+        }
 
         public static async Task<Group[]?> GetGroups()
         {
@@ -308,7 +312,7 @@ namespace AqbaServer.API
         public static async Task<TaskType[]?> GetTypes()
         {
             string link = Immutable.OkdeskApiLink + "/dictionaries/issues/types?api_token=" + Config.OkdeskApiToken;
-            TaskType[]? types = Array.Empty<TaskType>();
+            TaskType[]? types = [];
             List<TaskType> list;
             var response = await SendApiRequest(link);
 
@@ -348,7 +352,7 @@ namespace AqbaServer.API
         public static async Task<Status[]?> GetStatuses()
         {
             string link = Immutable.OkdeskApiLink + "/issues/statuses/?api_token=" + Config.OkdeskApiToken;
-            Status[]? statuses = Array.Empty<Status>();
+            Status[]? statuses = [];
             var response = await SendApiRequest(link);
 
             if (string.IsNullOrEmpty(response) || response == "[]")
@@ -362,6 +366,28 @@ namespace AqbaServer.API
 
             if (statuses != null && statuses.Length > 0)
                 return statuses;
+
+            return null;
+
+        }
+
+        public static async Task<Priority[]?> GetPriorities()
+        {
+            string link = Immutable.OkdeskApiLink + "/issues/priorities/?api_token=" + Config.OkdeskApiToken;
+            Priority[]? priorities = [];
+            var response = await SendApiRequest(link);
+
+            if (string.IsNullOrEmpty(response) || response == "[]")
+                return null;
+
+            try
+            {
+                priorities = JsonConvert.DeserializeObject<Priority[]>(response);
+            }
+            catch (Exception e) { WriteLog.Error(e.ToString()); }
+
+            if (priorities != null && priorities.Length > 0)
+                return priorities;
 
             return null;
 

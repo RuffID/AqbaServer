@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using AqbaServer.Interfaces.OkdeskEntities;
 using Microsoft.AspNetCore.Authorization;
 using AqbaServer.Models.Authorization;
+using AqbaServer.Interfaces.OkdeskPerformance;
 
 namespace AqbaServer.Controllers.OkdeskEntities
 {

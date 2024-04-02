@@ -1,7 +1,7 @@
 ﻿using AqbaServer.API;
 using AqbaServer.Data;
 using AqbaServer.Interfaces.OkdeskEntities;
-using AqbaServer.Models.OkdeskEntities;
+using AqbaServer.Models.OkdeskPerformance;
 
 namespace AqbaServer.Repository.OkdeskEntities
 {

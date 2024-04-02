@@ -1,4 +1,4 @@
-﻿using AqbaServer.Interfaces.OkdeskEntities;
+﻿using AqbaServer.Interfaces.OkdeskPerformance;
 
 namespace AqbaServer.Services
 {
@@ -7,7 +7,7 @@ namespace AqbaServer.Services
     {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            await Task.Delay(900000, stoppingToken);
+            await Task.Delay(TimeSpan.FromMinutes(30), stoppingToken);
 
             while (!stoppingToken.IsCancellationRequested)
             {

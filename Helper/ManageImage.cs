@@ -10,9 +10,11 @@ namespace AqbaServer.Helper
             try
             {
                 var filepath = GetFilePath(directoryName, fileName);
-
                 if (!File.Exists(filepath))
+                {
+                    WriteLog.Info($"[Download file method] File {fileName} not exists");
                     return (null, null, null);
+                }
 
                 var provider = new FileExtensionContentTypeProvider();
                 if (!provider.TryGetContentType(filepath, out var _ContentType))
@@ -55,7 +57,7 @@ namespace AqbaServer.Helper
 
         static string GetFilePath(string directoryName, string fileName)
         {
-            var staticContentDirectory = Directory.GetCurrentDirectory();
+            var staticContentDirectory = System.AppContext.BaseDirectory;
 
             if (!Directory.Exists(directoryName))
                 Directory.CreateDirectory(directoryName);

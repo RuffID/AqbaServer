@@ -1,6 +1,7 @@
+using AqbaServer.Dto;
 using AqbaServer.Helper;
 using AqbaServer.Models.Authorization;
-using AqbaServer.Models.OkdeskEntities;
+using AqbaServer.Models.OkdeskPerformance;
 using AqbaServer.Models.OkdeskReport;
 using MySql.Data.MySqlClient;
 
@@ -623,6 +624,189 @@ namespace AqbaServer.Data
                 cmd.Parameters.Add("@passwordHash", MySqlDbType.String).Value = user?.Password;
                 cmd.Parameters.Add("@roleId", MySqlDbType.Int32).Value = Convert.ToInt32(user?.Role);
                 cmd.Parameters.Add("@active", MySqlDbType.Bit).Value = user?.Active;
+
+                await cmd.ExecuteNonQueryAsync();
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return false;
+            }
+            finally
+            {
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<bool> InsertIssue(Issue issue)
+        {
+            if (issue == null) return false;
+
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            try
+            {
+                await connection.OpenAsync();
+                string sqlCommand =
+                    "INSERT issue (id, assignee_id, author_id, title, internal_status, created_at, completed_at, deadline_at, delay_to, deleted_at, statusId, typeId, priorityId, companyId, service_objectId) " +
+                    "VALUES (@id, @assignee_id, @author_id, @title, @internal_status, @created_at, @completed_at, @deadline_at, @delay_to, @deleted_at, @statusId, @typeId, @priorityId, @companyId, @service_objectId)";
+
+                MySqlCommand cmd = connection.CreateCommand();
+
+                cmd.CommandText = sqlCommand;
+                cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = issue.Id;
+                cmd.Parameters.Add("@assignee_id", MySqlDbType.Int32).Value = issue?.Assignee_id ?? null;
+                cmd.Parameters.Add("@author_id", MySqlDbType.Int32).Value = issue?.Author_id ?? null;
+                cmd.Parameters.Add("@title", MySqlDbType.String).Value = issue?.Title ?? null;
+                cmd.Parameters.Add("@internal_status", MySqlDbType.String).Value = issue?.Internal_status ?? null;
+                if (issue?.Created_at != null)
+                    cmd.Parameters.Add("@created_at", MySqlDbType.DateTime).Value = issue?.Created_at;
+                else cmd.Parameters.Add("@created_at", MySqlDbType.DateTime).Value = null;
+
+                if (issue?.Completed_at != null)
+                    cmd.Parameters.Add("@completed_at", MySqlDbType.DateTime).Value = issue?.Completed_at;
+                else cmd.Parameters.Add("@completed_at", MySqlDbType.DateTime).Value = null;
+
+                if (issue?.Deadline_at != null)
+                    cmd.Parameters.Add("@deadline_at", MySqlDbType.DateTime).Value = issue?.Deadline_at;
+                else cmd.Parameters.Add("@deadline_at", MySqlDbType.DateTime).Value = null;
+
+                if (issue?.Delay_to != null)
+                    cmd.Parameters.Add("@delay_to", MySqlDbType.DateTime).Value = issue?.Delay_to;
+                else cmd.Parameters.Add("@delay_to", MySqlDbType.DateTime).Value = null;
+
+                if (issue?.Deleted_at != null)
+                    cmd.Parameters.Add("@deleted_at", MySqlDbType.DateTime).Value = issue?.Deleted_at;
+                else cmd.Parameters.Add("@deleted_at", MySqlDbType.DateTime).Value = null;
+
+                cmd.Parameters.Add("@statusId", MySqlDbType.Int32).Value = issue?.Status?.Id ?? null;
+                cmd.Parameters.Add("@typeId", MySqlDbType.Int32).Value = issue?.Type?.Id ?? null;
+                cmd.Parameters.Add("@priorityId", MySqlDbType.Int32).Value = issue?.Priority?.Id ?? null;
+
+                if (issue?.Company != null && issue.Company.Id != 0)
+                    cmd.Parameters.Add("@companyId", MySqlDbType.Int32).Value = issue.Company.Id;
+                else
+                    cmd.Parameters.Add("@companyId", MySqlDbType.Int32).Value = null;
+
+                if (issue?.Service_object != null && issue.Service_object.Id != 0)
+                    cmd.Parameters.Add("@service_objectId", MySqlDbType.Int32).Value = issue.Service_object.Id;
+                else
+                    cmd.Parameters.Add("@service_objectId", MySqlDbType.Int32).Value = null;
+
+                await cmd.ExecuteNonQueryAsync();
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                string msg = $"Issue create info: Id: {issue.Id}, AssigneeId: {issue.Assignee_id}, statusId: {issue.Status?.Id}, typeId: {issue.Type?.Id}, priorityId: {issue.Priority?.Id}, companyId: {issue.Company?.Id}, service_objectId: {issue.Service_object?.Id}";
+                WriteLog.Error(msg + "\n" + e.ToString());
+                return false;
+            }
+            finally
+            {
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<bool> InsertIssueType(TaskType type)
+        {
+            if (type == null) return false;
+
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            try
+            {
+                await connection.OpenAsync();
+                string sqlCommand =
+                    "INSERT issue_type (`name`, `code`, `default`, `inner`, `available_for_client`, `type`) " +
+                    "VALUES (@name, @code, @default, @inner, @available_for_client, @type)";
+
+                MySqlCommand cmd = connection.CreateCommand();
+
+                cmd.CommandText = sqlCommand;
+                // id нет потому что оно автоинкрементируемое
+                cmd.Parameters.Add("@name", MySqlDbType.String).Value = type?.Name;
+                cmd.Parameters.Add("@code", MySqlDbType.String).Value = type?.Code;
+                cmd.Parameters.Add("@default", MySqlDbType.Bit).Value = type?.Default;
+                cmd.Parameters.Add("@inner", MySqlDbType.Bit).Value = type?.Inner;
+                cmd.Parameters.Add("@available_for_client", MySqlDbType.Bit).Value = type?.Available_for_client;
+                cmd.Parameters.Add("@type", MySqlDbType.String).Value = type?.Type;
+
+                await cmd.ExecuteNonQueryAsync();
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return false;
+            }
+            finally
+            {
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<bool> InsertIssueStatus(Status? status)
+        {
+            if (status == null) return false;
+
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            try
+            {
+                await connection.OpenAsync();
+                string sqlCommand =
+                    "INSERT issue_status (name, code, color) " +
+                    "VALUES (@name, @code, @color)";
+
+                MySqlCommand cmd = connection.CreateCommand();
+
+                cmd.CommandText = sqlCommand;
+                // id нет потому что оно автоинкрементируемое
+                cmd.Parameters.Add("@name", MySqlDbType.String).Value = status?.Name;
+                cmd.Parameters.Add("@code", MySqlDbType.String).Value = status?.Code;
+                cmd.Parameters.Add("@color", MySqlDbType.String).Value = status?.Color;
+
+                await cmd.ExecuteNonQueryAsync();
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return false;
+            }
+            finally
+            {
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<bool> InsertIssuePriority(Priority? priority)
+        {
+            if (priority == null) return false;
+
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            try
+            {
+                await connection.OpenAsync();
+                string sqlCommand =
+                    "INSERT issue_priority (name, code, position, color) " +
+                    "VALUES (@name, @code, @position, @color)";
+
+                MySqlCommand cmd = connection.CreateCommand();
+
+                cmd.CommandText = sqlCommand;
+                // id нет потому что оно автоинкрементируемое
+                cmd.Parameters.Add("@name", MySqlDbType.String).Value = priority?.Name;
+                cmd.Parameters.Add("@code", MySqlDbType.String).Value = priority?.Code;
+                cmd.Parameters.Add("@position", MySqlDbType.Int32).Value = priority?.Position;
+                cmd.Parameters.Add("@color", MySqlDbType.String).Value = priority?.Color;
 
                 await cmd.ExecuteNonQueryAsync();
 

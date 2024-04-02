@@ -2,10 +2,11 @@ using AqbaServer.Authorization;
 using AqbaServer.Helper;
 using AqbaServer.Interfaces.Authorization;
 using AqbaServer.Interfaces.OkdeskEntities;
+using AqbaServer.Interfaces.OkdeskPerformance;
 using AqbaServer.Interfaces.Service;
 using AqbaServer.Repository.Authorization;
 using AqbaServer.Repository.OkdeskEntities;
-using AqbaServer.Repository.OkdeskReport;
+using AqbaServer.Repository.OkdeskPerformance;
 using AqbaServer.Services;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -35,6 +36,10 @@ try
     builder.Services.AddScoped<IUserRepository, UserRepository>();
     builder.Services.AddScoped<IUserRoleRepository, UserRoleRepository>();
     builder.Services.AddScoped<IManageImage, ManageImage>();
+    builder.Services.AddScoped<IIssuePriorityRepository, IssuePriorityRepository>();
+    builder.Services.AddScoped<IIssueStatusRepository, IssueStatusRepository>();
+    builder.Services.AddScoped<IIssueTypeRepository, IssueTypeRepository>();
+    builder.Services.AddScoped<IIssueRepository, IssueRepository>();
     
     builder.Services.AddAuthentication().AddJwtBearer(options =>
         {
@@ -91,8 +96,8 @@ try
     builder.Services.AddHostedService<CheckLogFilesService>();
 
     builder.Services.AddHostedService<LoginService>();
-    builder.Services.AddHostedService<ThirtyMinutesReportService>();
     builder.Services.AddHostedService<UpdateDirectoriesService>();
+    builder.Services.AddHostedService<ThirtyMinutesReportService>();
     builder.Services.AddHostedService<OneDayReportService>();
     builder.Services.AddHostedService<WeekReportService>();
 

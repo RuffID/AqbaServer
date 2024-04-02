@@ -1,4 +1,4 @@
-﻿using AqbaServer.Models.OkdeskEntities;
+﻿using AqbaServer.Models.OkdeskPerformance;
 
 namespace AqbaServer.Interfaces.OkdeskEntities
 {

@@ -1,7 +1,8 @@
 ﻿using AqbaServer.Dto;
 using AqbaServer.Models;
 using AqbaServer.Models.Authorization;
-using AqbaServer.Models.OkdeskEntities;
+using AqbaServer.Models.OkdeskPerformance;
+using AqbaServer.Models.OkdeskReport;
 using AutoMapper;
 
 namespace AqbaServer.Helper
@@ -30,6 +31,12 @@ namespace AqbaServer.Helper
             CreateMap<Equipment, EquipmentDto>();
             CreateMap<UserDto, User>();
             CreateMap<User, UserDto>();
+            CreateMap<StatusDto, Status>();
+            CreateMap<Status, StatusDto>();
+            CreateMap<PriorityDto, Priority>();
+            CreateMap<Priority, PriorityDto>();
+            CreateMap<TaskTypeDto, TaskType>();
+            CreateMap<TaskType, TaskTypeDto>();
         }
     }
 }

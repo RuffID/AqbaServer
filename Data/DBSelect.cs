@@ -1,7 +1,7 @@
 using AqbaServer.Dto;
 using AqbaServer.Helper;
 using AqbaServer.Models.Authorization;
-using AqbaServer.Models.OkdeskEntities;
+using AqbaServer.Models.OkdeskPerformance;
 using AqbaServer.Models.OkdeskReport;
 using MySql.Data.MySqlClient;
 using System.Data.Common;
@@ -144,6 +144,7 @@ namespace AqbaServer.Data
                 {
                     await reader.ReadAsync();
                     company = new();
+                    company.Category = new();
 
                     company.Id = Convert.ToInt32(reader["id"]);
                     if (!reader.IsDBNull(reader.GetOrdinal("name")))
@@ -2434,6 +2435,570 @@ namespace AqbaServer.Data
                 }
                 return null;
 
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return null;
+            }
+            finally
+            {
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<List<int>?> SelectIssues(int statusIdNot)
+        {
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            try
+            {
+                await connection.OpenAsync();
+                List<int>? issues = [];
+                string sqlCommand = string.Format( "SELECT id FROM issue WHERE statusId != {0}", statusIdNot);
+
+                MySqlCommand cmd = new()
+                {
+                    Connection = connection,
+                    CommandText = sqlCommand
+                };
+
+                using DbDataReader reader = await cmd.ExecuteReaderAsync();
+
+                if (reader.HasRows)
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        issues.Add( Convert.ToInt32(reader["id"]) );
+                    }
+                    return issues;
+                }
+                return null;
+
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return null;
+            }
+            finally
+            {
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<List<Issue>?> SelectIssues(bool unknownIssues = false)
+        {
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            try
+            {
+                await connection.OpenAsync();
+                List<Issue> issues = [];
+                Issue issue;
+                string sqlCommand = 
+                    "SELECT issue.id, issue.assignee_id, issue.author_id, issue.title, issue.internal_status, issue.created_at, issue.completed_at, " +
+                    "issue.deadline_at, issue.delay_to, issue.deleted_at, issue.companyId, issue.service_objectId, " +
+                    "issue_priority.id AS priorityId, issue_priority.name AS priorityName, " +
+                    "issue_priority.code AS priorityCode, issue_priority.position AS priorityPosition, issue_priority.color AS priorityColor, " +
+                    "issue_type.id AS typeId, issue_type.name AS typeName, issue_type.code AS typeCode, issue_type.default AS typeDefault, " +
+                    "issue_type.inner AS typeInner, issue_type.type AS typeType, issue_type.available_for_client AS typeAvailable, " +
+                    "issue_status.id AS statusId, issue_status.code AS statusCode, issue_status.name AS statusName, issue_status.color AS statusColor " +
+                    "FROM issue " +
+                    "JOIN issue_priority ON issue.priorityId = issue_priority.id " +
+                    "JOIN issue_type ON issue.typeId = issue_type.id " +
+                    "JOIN issue_status ON issue.statusId = issue_status.id " +
+                    "WHERE issue_status.Code != 'closed'";
+
+                if (unknownIssues) sqlCommand += " AND (issue.internal_status = 'unknown' OR issue.internal_status IS NULL)";
+                else sqlCommand += " AND issue.internal_status IS NULL";
+
+                MySqlCommand cmd = new()
+                {
+                    Connection = connection,
+                    CommandText = sqlCommand
+                };
+
+                using DbDataReader reader = await cmd.ExecuteReaderAsync();
+
+                if (reader.HasRows)
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        issue = new();
+                        issue.Status = new();
+                        issue.Priority = new();
+                        issue.Type = new();
+                        issue.Company = new();
+                        issue.Service_object = new();
+
+                        issue.Id = Convert.ToInt32(reader["id"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("assignee_id")))
+                            issue.Assignee_id = Convert.ToInt32(reader["assignee_id"].ToString());
+                        if (!reader.IsDBNull(reader.GetOrdinal("author_id")))
+                            issue.Author_id = Convert.ToInt32(reader["author_id"].ToString());
+                        if (!reader.IsDBNull(reader.GetOrdinal("title")))
+                            issue.Title = reader["title"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("internal_status")))
+                            issue.Title = reader["internal_status"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("created_at")))
+                            issue.Created_at = Convert.ToDateTime(reader["created_at"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("completed_at")))
+                            issue.Completed_at = Convert.ToDateTime(reader["completed_at"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("deadline_at")))
+                            issue.Deadline_at = Convert.ToDateTime(reader["deadline_at"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("delay_to")))
+                            issue.Delay_to = Convert.ToDateTime(reader["delay_to"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("deleted_at")))
+                            issue.Deleted_at = Convert.ToDateTime(reader["deleted_at"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("priorityId")))
+                            issue.Priority.Id = Convert.ToInt32(reader["priorityId"].ToString());
+                        if (!reader.IsDBNull(reader.GetOrdinal("priorityName")))
+                            issue.Priority.Name = reader["priorityName"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("priorityCode")))
+                            issue.Priority.Code = reader["priorityCode"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("priorityPosition")))
+                            issue.Priority.Position = Convert.ToInt32(reader["priorityPosition"].ToString());
+                        if (!reader.IsDBNull(reader.GetOrdinal("priorityColor")))
+                            issue.Priority.Color = reader["priorityColor"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("typeId")))
+                            issue.Type.Id = Convert.ToInt32(reader["typeId"].ToString());
+                        if (!reader.IsDBNull(reader.GetOrdinal("typeName")))
+                            issue.Type.Name = reader["typeName"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("typeCode")))
+                            issue.Type.Code = reader["typeCode"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("typeDefault")))
+                            issue.Type.Default = Convert.ToBoolean(reader["typeDefault"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("typeInner")))
+                            issue.Type.Inner = Convert.ToBoolean(reader["typeInner"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("typeType")))
+                            issue.Type.Type = reader["typeType"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("typeAvailable")))
+                            issue.Type.Available_for_client = Convert.ToBoolean(reader["typeAvailable"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("statusId")))
+                            issue.Status.Id = Convert.ToInt32(reader["statusId"].ToString());
+                        if (!reader.IsDBNull(reader.GetOrdinal("statusCode")))
+                            issue.Status.Code = reader["statusCode"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("statusName")))
+                            issue.Status.Name = reader["statusName"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("statusColor")))
+                            issue.Status.Color = reader["statusColor"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("companyId")))
+                            issue.Company.Id = Convert.ToInt32(reader["companyId"].ToString());
+                        if (!reader.IsDBNull(reader.GetOrdinal("service_objectId")))
+                            issue.Service_object.Id = Convert.ToInt32(reader["service_objectId"].ToString());
+
+                        issues.Add(issue);
+                    }
+                        return issues;
+                }
+                return null;
+
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return null;
+            }
+            finally
+            {
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<Issue?> SelectIssue(int issueId)
+        {
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            try
+            {
+                await connection.OpenAsync();
+                Issue issue;
+                string sqlCommand = string.Format(
+                    "SELECT issue.id, issue.assignee_id, issue.author_id, issue.title, issue.created_at, issue.completed_at, issue.deadline_at, issue.delay_to, " +
+                    "issue.deleted_at, issue.companyId, issue.service_objectId, " +
+                    "issue_priority.id AS priorityId, issue_priority.name AS priorityName, " +
+                    "issue_priority.code AS priorityCode, issue_priority.position AS priorityPosition, issue_priority.color AS priorityColor, " +
+                    "issue_type.id AS typeId, issue_type.name AS typeName, issue_type.code AS typeCode, issue_type.default AS typeDefault, " +
+                    "issue_type.inner AS typeInner, issue_type.type AS typeType, issue_type.available_for_client AS typeAvailable, " +
+                    "issue_status.id AS statusId, issue_status.code AS statusCode, issue_status.name AS statusName, issue_status.color AS statusColor " +
+                    "FROM issue " +
+                    "JOIN issue_priority ON issue.priorityId = issue_priority.id " +
+                    "JOIN issue_type ON issue.typeId = issue_type.id " +
+                    "JOIN issue_status ON issue.statusId = issue_status.id " +
+                    "WHERE issue.id = '{0}'", issueId);
+
+                MySqlCommand cmd = new()
+                {
+                    Connection = connection,
+                    CommandText = sqlCommand
+                };
+
+                using DbDataReader reader = await cmd.ExecuteReaderAsync();
+
+                if (reader.HasRows)
+                {
+                    await reader.ReadAsync();
+                    issue = new();
+                    issue.Status = new();
+                    issue.Priority = new();
+                    issue.Type = new();
+                    issue.Company = new();
+                    issue.Service_object = new();
+
+                    issue.Id = Convert.ToInt32(reader["id"]);
+                    if (!reader.IsDBNull(reader.GetOrdinal("assignee_id")))
+                        issue.Assignee_id = Convert.ToInt32(reader["assignee_id"].ToString());
+                    if (!reader.IsDBNull(reader.GetOrdinal("author_id")))
+                        issue.Author_id = Convert.ToInt32(reader["author_id"].ToString());
+                    if (!reader.IsDBNull(reader.GetOrdinal("title")))
+                        issue.Title = reader["title"].ToString();
+                    if (!reader.IsDBNull(reader.GetOrdinal("created_at")))
+                        issue.Created_at = Convert.ToDateTime(reader["created_at"]);
+                    if (!reader.IsDBNull(reader.GetOrdinal("completed_at")))
+                        issue.Completed_at = Convert.ToDateTime(reader["completed_at"]);
+                    if (!reader.IsDBNull(reader.GetOrdinal("deadline_at")))
+                        issue.Deadline_at = Convert.ToDateTime(reader["deadline_at"]);
+                    if (!reader.IsDBNull(reader.GetOrdinal("delay_to")))
+                        issue.Delay_to = Convert.ToDateTime(reader["delay_to"]);
+                    if (!reader.IsDBNull(reader.GetOrdinal("deleted_at")))
+                        issue.Deleted_at = Convert.ToDateTime(reader["deleted_at"]);
+                    if (!reader.IsDBNull(reader.GetOrdinal("priorityId")))
+                        issue.Priority.Id = Convert.ToInt32(reader["priorityId"].ToString());
+                    if (!reader.IsDBNull(reader.GetOrdinal("priorityName")))
+                        issue.Priority.Name = reader["priorityName"].ToString();
+                    if (!reader.IsDBNull(reader.GetOrdinal("priorityCode")))
+                        issue.Priority.Code = reader["priorityCode"].ToString();
+                    if (!reader.IsDBNull(reader.GetOrdinal("priorityPosition")))
+                        issue.Priority.Position = Convert.ToInt32(reader["priorityPosition"].ToString());
+                    if (!reader.IsDBNull(reader.GetOrdinal("priorityColor")))
+                        issue.Priority.Color = reader["priorityColor"].ToString();
+                    if (!reader.IsDBNull(reader.GetOrdinal("typeId")))
+                        issue.Type.Id = Convert.ToInt32(reader["typeId"].ToString());
+                    if (!reader.IsDBNull(reader.GetOrdinal("typeName")))
+                        issue.Type.Name = reader["typeName"].ToString();
+                    if (!reader.IsDBNull(reader.GetOrdinal("typeCode")))
+                        issue.Type.Code = reader["typeCode"].ToString();
+                    if (!reader.IsDBNull(reader.GetOrdinal("typeDefault")))
+                        issue.Type.Default = Convert.ToBoolean(reader["typeDefault"]);
+                    if (!reader.IsDBNull(reader.GetOrdinal("typeInner")))
+                        issue.Type.Inner = Convert.ToBoolean(reader["typeInner"]);
+                    if (!reader.IsDBNull(reader.GetOrdinal("typeType")))
+                        issue.Type.Type = reader["typeType"].ToString();
+                    if (!reader.IsDBNull(reader.GetOrdinal("typeAvailable")))
+                        issue.Type.Available_for_client = Convert.ToBoolean(reader["typeAvailable"]);
+                    if (!reader.IsDBNull(reader.GetOrdinal("statusId")))
+                        issue.Status.Id = Convert.ToInt32(reader["statusId"].ToString());
+                    if (!reader.IsDBNull(reader.GetOrdinal("statusCode")))
+                        issue.Status.Code = reader["statusCode"].ToString();
+                    if (!reader.IsDBNull(reader.GetOrdinal("statusName")))
+                        issue.Status.Name = reader["statusName"].ToString();
+                    if (!reader.IsDBNull(reader.GetOrdinal("statusColor")))
+                        issue.Status.Color = reader["statusColor"].ToString();
+                    if (!reader.IsDBNull(reader.GetOrdinal("companyId")))
+                        issue.Company.Id = Convert.ToInt32(reader["companyId"].ToString());
+                    if (!reader.IsDBNull(reader.GetOrdinal("service_objectId")))
+                        issue.Service_object.Id = Convert.ToInt32(reader["service_objectId"].ToString());
+
+                    return issue;
+                }
+                return null;
+
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return null;
+            }
+            finally
+            {
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<TaskType?> SelectType(TaskType type)
+        {
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            try
+            {
+                await connection.OpenAsync();
+                TaskType tp;
+                string sqlCommand = $"SELECT * FROM issue_type WHERE code = '{type.Code}'";
+
+                MySqlCommand cmd = new()
+                {
+                    Connection = connection,
+                    CommandText = sqlCommand
+                };
+
+                using DbDataReader reader = await cmd.ExecuteReaderAsync();
+                if (reader.HasRows)
+                {
+                    await reader.ReadAsync();
+                    tp = new();
+                    tp.Id = Convert.ToInt32(reader["id"]);
+                    if (!reader.IsDBNull(reader.GetOrdinal("name")))
+                        tp.Name = reader["name"].ToString();
+                    if (!reader.IsDBNull(reader.GetOrdinal("code")))
+                        tp.Code = reader["code"].ToString();                    
+                    if (!reader.IsDBNull(reader.GetOrdinal("default")))
+                        tp.Default = Convert.ToBoolean(reader["default"]);
+                    if (!reader.IsDBNull(reader.GetOrdinal("inner")))
+                        tp.Inner = Convert.ToBoolean(reader["inner"]);
+                    if (!reader.IsDBNull(reader.GetOrdinal("available_for_client")))
+                        tp.Available_for_client = Convert.ToBoolean(reader["available_for_client"]);
+                    if (!reader.IsDBNull(reader.GetOrdinal("type")))
+                        tp.Type = reader["type"].ToString();
+
+                    return tp;
+                }
+                return null;
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return null;
+            }
+            finally
+            {
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<List<TaskType>?> SelectTypes()
+        {
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            try
+            {
+                await connection.OpenAsync();
+                List<TaskType> types = [];
+                TaskType? type;
+                string sqlCommand = "SELECT * FROM issue_type";
+
+                MySqlCommand cmd = new()
+                {
+                    Connection = connection,
+                    CommandText = sqlCommand
+                };
+
+                using DbDataReader reader = await cmd.ExecuteReaderAsync();
+                if (reader.HasRows)
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        type = new();
+
+                        type.Id = Convert.ToInt32(reader["id"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("name")))
+                            type.Name = reader["name"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("code")))
+                            type.Code = reader["code"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("default")))
+                            type.Default = Convert.ToBoolean(reader["default"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("inner")))
+                            type.Inner = Convert.ToBoolean(reader["inner"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("available_for_client")))
+                            type.Available_for_client = Convert.ToBoolean(reader["available_for_client"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("type")))
+                            type.Type = reader["type"].ToString();
+
+                        types.Add(type);
+                    }
+                    return types;
+                }
+                return null;
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return null;
+            }
+            finally
+            {
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<Status?> SelectIssueStatus(Status status)
+        {
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            try
+            {
+                await connection.OpenAsync();
+                Status st;
+                string sqlCommand = $"SELECT * FROM issue_status WHERE code = '{status.Code}'";
+
+                MySqlCommand cmd = new()
+                {
+                    Connection = connection,
+                    CommandText = sqlCommand
+                };
+
+                using DbDataReader reader = await cmd.ExecuteReaderAsync();
+                if (reader.HasRows)
+                {
+                    await reader.ReadAsync();
+                    st = new();
+                    st.Id = Convert.ToInt32(reader["id"]);
+                    if (!reader.IsDBNull(reader.GetOrdinal("name")))
+                        st.Name = reader["name"].ToString();
+                    if (!reader.IsDBNull(reader.GetOrdinal("code")))
+                        st.Code = reader["code"].ToString();
+                    if (!reader.IsDBNull(reader.GetOrdinal("color")))
+                        st.Color = reader["color"].ToString();
+
+                    return st;
+                }
+                return null;
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return null;
+            }
+            finally
+            {
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<List<Status>?> SelectIssueStatuses()
+        {
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            try
+            {
+                await connection.OpenAsync();
+                List<Status> statuses = [];
+                Status? status;
+                string sqlCommand = "SELECT * FROM issue_status";
+
+                MySqlCommand cmd = new()
+                {
+                    Connection = connection,
+                    CommandText = sqlCommand
+                };
+
+                using DbDataReader reader = await cmd.ExecuteReaderAsync();
+                if (reader.HasRows)
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        status = new();
+
+                        status.Id = Convert.ToInt32(reader["id"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("name")))
+                            status.Name = reader["name"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("code")))
+                            status.Code = reader["code"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("color")))
+                            status.Color = reader["color"].ToString();
+
+                        statuses.Add(status);
+                    }
+                    return statuses;
+                }
+                return null;
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return null;
+            }
+            finally
+            {
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<Priority?> SelectIssuePriority(Priority priority)
+        {
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            try
+            {
+                await connection.OpenAsync();
+                Priority pt;
+                string sqlCommand = $"SELECT * FROM issue_priority WHERE code = '{priority.Code}'";
+
+                MySqlCommand cmd = new()
+                {
+                    Connection = connection,
+                    CommandText = sqlCommand
+                };
+
+                using DbDataReader reader = await cmd.ExecuteReaderAsync();
+                if (reader.HasRows)
+                {
+                    await reader.ReadAsync();
+                    pt = new();
+                    pt.Id = Convert.ToInt32(reader["id"]);
+                    if (!reader.IsDBNull(reader.GetOrdinal("name")))
+                        pt.Name = reader["name"].ToString();
+                    if (!reader.IsDBNull(reader.GetOrdinal("code")))
+                        pt.Code = reader["code"].ToString();
+                    if (!reader.IsDBNull(reader.GetOrdinal("position")))
+                        pt.Position = Convert.ToInt32(reader["position"].ToString());
+                    if (!reader.IsDBNull(reader.GetOrdinal("color")))
+                        pt.Color = reader["color"].ToString();
+
+                    return pt;
+                }
+                return null;
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return null;
+            }
+            finally
+            {
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<List<Priority>?> SelectIssuePriorities()
+        {
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            try
+            {
+                await connection.OpenAsync();
+                List<Priority> priorities = [];
+                Priority? priority;
+                string sqlCommand = "SELECT * FROM issue_priority";
+
+                MySqlCommand cmd = new()
+                {
+                    Connection = connection,
+                    CommandText = sqlCommand
+                };
+
+                using DbDataReader reader = await cmd.ExecuteReaderAsync();
+                if (reader.HasRows)
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        priority = new();
+
+                        priority.Id = Convert.ToInt32(reader["id"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("name")))
+                            priority.Name = reader["name"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("code")))
+                            priority.Code = reader["code"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("position")))
+                            priority.Position = Convert.ToInt32(reader["position"].ToString());
+                        if (!reader.IsDBNull(reader.GetOrdinal("color")))
+                            priority.Color = reader["color"].ToString();
+
+                        priorities.Add(priority);
+                    }
+                    return priorities;
+                }
+                return null;
             }
             catch (Exception e)
             {

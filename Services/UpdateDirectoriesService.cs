@@ -1,15 +1,16 @@
 ﻿using AqbaServer.Interfaces.OkdeskEntities;
+using AqbaServer.Interfaces.OkdeskPerformance;
 
 namespace AqbaServer.Services
 {
-    // Данная служба предназначена для получения данных за предыдущий в день на случай если вчерашние данные были изменены
+    // Данная служба предназначена для обновления всех справочников каждые три часа
     public class UpdateDirectoriesService(IServiceScopeFactory serviceScopeFactory)
         : BackgroundService
     {
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            await Task.Delay(1200000, stoppingToken); // Задержка при запуске сервиса
+            await Task.Delay(TimeSpan.FromMinutes(30), stoppingToken); // Задержка при запуске сервиса
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -23,12 +24,19 @@ namespace AqbaServer.Services
                 await UpdateCompany();
                 await UpdateMaintenanceEntity();
                 await UpdateEquipment();
+                await UpdateIssueDictionary();
 
                 TimeSpan remaining = DateTime.Now.AddHours(3) - DateTime.Now;
                 await Task.Delay(remaining, stoppingToken);
             }
         }
-        
+
+        async Task UpdateIssueDictionary()
+        {
+            using IServiceScope scope = serviceScopeFactory.CreateScope();
+            IIssueRepository issueRepository = scope.ServiceProvider.GetRequiredService<IIssueRepository>();
+            await issueRepository.UpdateIssueDictionary();
+        }
 
         async Task UpdateKind()
         {
