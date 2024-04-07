@@ -2448,7 +2448,7 @@ namespace AqbaServer.Data
             }
         }
 
-        public static async Task<List<int>?> SelectIssues(int statusIdNot)
+        /*public static async Task<List<int>?> SelectIssues(int statusIdNot)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
             try
@@ -2486,9 +2486,9 @@ namespace AqbaServer.Data
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
-        }
+        }*/
 
-        public static async Task<List<Issue>?> SelectIssues(bool unknownIssues = false)
+        public static async Task<List<Issue>?> SelectIssues(Status status, bool unknownIssues = false)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
             try
@@ -2496,7 +2496,7 @@ namespace AqbaServer.Data
                 await connection.OpenAsync();
                 List<Issue> issues = [];
                 Issue issue;
-                string sqlCommand = 
+                /*string sqlCommand = 
                     "SELECT issue.id, issue.assignee_id, issue.author_id, issue.title, issue.internal_status, issue.created_at, issue.completed_at, " +
                     "issue.deadline_at, issue.delay_to, issue.deleted_at, issue.companyId, issue.service_objectId, " +
                     "issue_priority.id AS priorityId, issue_priority.name AS priorityName, " +
@@ -2508,10 +2508,15 @@ namespace AqbaServer.Data
                     "JOIN issue_priority ON issue.priorityId = issue_priority.id " +
                     "JOIN issue_type ON issue.typeId = issue_type.id " +
                     "JOIN issue_status ON issue.statusId = issue_status.id " +
-                    "WHERE issue_status.Code != 'closed'";
+                    "WHERE issue_status.Code != 'closed'";*/
 
-                if (unknownIssues) sqlCommand += " AND (issue.internal_status = 'unknown' OR issue.internal_status IS NULL)";
-                else sqlCommand += " AND issue.internal_status IS NULL";
+                string sqlCommand = $"SELECT * FROM issue WHERE statusId != {status.Id} ";
+
+                /*if (unknownIssues) sqlCommand += " AND (issue.internal_status = 'unknown' OR issue.internal_status IS NULL)";
+                else sqlCommand += " AND issue.internal_status IS NULL";*/
+
+                if (unknownIssues) sqlCommand += " AND (internal_status = 'unknown' OR internal_status IS NULL)";
+                else sqlCommand += " AND internal_status IS NULL";
 
                 MySqlCommand cmd = new()
                 {
@@ -2525,14 +2530,17 @@ namespace AqbaServer.Data
                 {
                     while (await reader.ReadAsync())
                     {
-                        issue = new();
-                        issue.Status = new();
-                        issue.Priority = new();
-                        issue.Type = new();
-                        issue.Company = new();
-                        issue.Service_object = new();
+                        issue = new()
+                        {
+                            Status = new(),
+                            Priority = new(),
+                            Type = new(),
+                            Company = new(),
+                            Service_object = new(),
 
-                        issue.Id = Convert.ToInt32(reader["id"]);
+                            Id = Convert.ToInt32(reader["id"])
+                        };
+
                         if (!reader.IsDBNull(reader.GetOrdinal("assignee_id")))
                             issue.Assignee_id = Convert.ToInt32(reader["assignee_id"].ToString());
                         if (!reader.IsDBNull(reader.GetOrdinal("author_id")))
@@ -2540,7 +2548,7 @@ namespace AqbaServer.Data
                         if (!reader.IsDBNull(reader.GetOrdinal("title")))
                             issue.Title = reader["title"].ToString();
                         if (!reader.IsDBNull(reader.GetOrdinal("internal_status")))
-                            issue.Title = reader["internal_status"].ToString();
+                            issue.Internal_status = reader["internal_status"].ToString();
                         if (!reader.IsDBNull(reader.GetOrdinal("created_at")))
                             issue.Created_at = Convert.ToDateTime(reader["created_at"]);
                         if (!reader.IsDBNull(reader.GetOrdinal("completed_at")))
@@ -2551,38 +2559,12 @@ namespace AqbaServer.Data
                             issue.Delay_to = Convert.ToDateTime(reader["delay_to"]);
                         if (!reader.IsDBNull(reader.GetOrdinal("deleted_at")))
                             issue.Deleted_at = Convert.ToDateTime(reader["deleted_at"]);
-                        if (!reader.IsDBNull(reader.GetOrdinal("priorityId")))
-                            issue.Priority.Id = Convert.ToInt32(reader["priorityId"].ToString());
-                        if (!reader.IsDBNull(reader.GetOrdinal("priorityName")))
-                            issue.Priority.Name = reader["priorityName"].ToString();
-                        if (!reader.IsDBNull(reader.GetOrdinal("priorityCode")))
-                            issue.Priority.Code = reader["priorityCode"].ToString();
-                        if (!reader.IsDBNull(reader.GetOrdinal("priorityPosition")))
-                            issue.Priority.Position = Convert.ToInt32(reader["priorityPosition"].ToString());
-                        if (!reader.IsDBNull(reader.GetOrdinal("priorityColor")))
-                            issue.Priority.Color = reader["priorityColor"].ToString();
-                        if (!reader.IsDBNull(reader.GetOrdinal("typeId")))
-                            issue.Type.Id = Convert.ToInt32(reader["typeId"].ToString());
-                        if (!reader.IsDBNull(reader.GetOrdinal("typeName")))
-                            issue.Type.Name = reader["typeName"].ToString();
-                        if (!reader.IsDBNull(reader.GetOrdinal("typeCode")))
-                            issue.Type.Code = reader["typeCode"].ToString();
-                        if (!reader.IsDBNull(reader.GetOrdinal("typeDefault")))
-                            issue.Type.Default = Convert.ToBoolean(reader["typeDefault"]);
-                        if (!reader.IsDBNull(reader.GetOrdinal("typeInner")))
-                            issue.Type.Inner = Convert.ToBoolean(reader["typeInner"]);
-                        if (!reader.IsDBNull(reader.GetOrdinal("typeType")))
-                            issue.Type.Type = reader["typeType"].ToString();
-                        if (!reader.IsDBNull(reader.GetOrdinal("typeAvailable")))
-                            issue.Type.Available_for_client = Convert.ToBoolean(reader["typeAvailable"]);
                         if (!reader.IsDBNull(reader.GetOrdinal("statusId")))
                             issue.Status.Id = Convert.ToInt32(reader["statusId"].ToString());
-                        if (!reader.IsDBNull(reader.GetOrdinal("statusCode")))
-                            issue.Status.Code = reader["statusCode"].ToString();
-                        if (!reader.IsDBNull(reader.GetOrdinal("statusName")))
-                            issue.Status.Name = reader["statusName"].ToString();
-                        if (!reader.IsDBNull(reader.GetOrdinal("statusColor")))
-                            issue.Status.Color = reader["statusColor"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("typeId")))
+                            issue.Type.Id = Convert.ToInt32(reader["typeId"].ToString());
+                        if (!reader.IsDBNull(reader.GetOrdinal("priorityId")))
+                            issue.Priority.Id = Convert.ToInt32(reader["priorityId"].ToString());
                         if (!reader.IsDBNull(reader.GetOrdinal("companyId")))
                             issue.Company.Id = Convert.ToInt32(reader["companyId"].ToString());
                         if (!reader.IsDBNull(reader.GetOrdinal("service_objectId")))
@@ -2614,7 +2596,7 @@ namespace AqbaServer.Data
             {
                 await connection.OpenAsync();
                 Issue issue;
-                string sqlCommand = string.Format(
+                /*string sqlCommand = string.Format(
                     "SELECT issue.id, issue.assignee_id, issue.author_id, issue.title, issue.created_at, issue.completed_at, issue.deadline_at, issue.delay_to, " +
                     "issue.deleted_at, issue.companyId, issue.service_objectId, " +
                     "issue_priority.id AS priorityId, issue_priority.name AS priorityName, " +
@@ -2626,7 +2608,8 @@ namespace AqbaServer.Data
                     "JOIN issue_priority ON issue.priorityId = issue_priority.id " +
                     "JOIN issue_type ON issue.typeId = issue_type.id " +
                     "JOIN issue_status ON issue.statusId = issue_status.id " +
-                    "WHERE issue.id = '{0}'", issueId);
+                    "WHERE issue.id = '{0}'", issueId);*/
+                string sqlCommand = $"SELECT * FROM issue WHERE id = '{issueId}'";
 
                 MySqlCommand cmd = new()
                 {
@@ -2639,20 +2622,25 @@ namespace AqbaServer.Data
                 if (reader.HasRows)
                 {
                     await reader.ReadAsync();
-                    issue = new();
-                    issue.Status = new();
-                    issue.Priority = new();
-                    issue.Type = new();
-                    issue.Company = new();
-                    issue.Service_object = new();
+                    issue = new()
+                    {
+                        Status = new(),
+                        Priority = new(),
+                        Type = new(),
+                        Company = new(),
+                        Service_object = new(),
 
-                    issue.Id = Convert.ToInt32(reader["id"]);
+                        Id = Convert.ToInt32(reader["id"])
+                    };
+
                     if (!reader.IsDBNull(reader.GetOrdinal("assignee_id")))
                         issue.Assignee_id = Convert.ToInt32(reader["assignee_id"].ToString());
                     if (!reader.IsDBNull(reader.GetOrdinal("author_id")))
                         issue.Author_id = Convert.ToInt32(reader["author_id"].ToString());
                     if (!reader.IsDBNull(reader.GetOrdinal("title")))
                         issue.Title = reader["title"].ToString();
+                    if (!reader.IsDBNull(reader.GetOrdinal("internal_status")))
+                        issue.Internal_status = reader["internal_status"].ToString();
                     if (!reader.IsDBNull(reader.GetOrdinal("created_at")))
                         issue.Created_at = Convert.ToDateTime(reader["created_at"]);
                     if (!reader.IsDBNull(reader.GetOrdinal("completed_at")))
@@ -2663,9 +2651,18 @@ namespace AqbaServer.Data
                         issue.Delay_to = Convert.ToDateTime(reader["delay_to"]);
                     if (!reader.IsDBNull(reader.GetOrdinal("deleted_at")))
                         issue.Deleted_at = Convert.ToDateTime(reader["deleted_at"]);
+                    if (!reader.IsDBNull(reader.GetOrdinal("statusId")))
+                        issue.Status.Id = Convert.ToInt32(reader["statusId"].ToString());
+                    if (!reader.IsDBNull(reader.GetOrdinal("typeId")))
+                        issue.Type.Id = Convert.ToInt32(reader["typeId"].ToString());
                     if (!reader.IsDBNull(reader.GetOrdinal("priorityId")))
                         issue.Priority.Id = Convert.ToInt32(reader["priorityId"].ToString());
-                    if (!reader.IsDBNull(reader.GetOrdinal("priorityName")))
+                    if (!reader.IsDBNull(reader.GetOrdinal("companyId")))
+                        issue.Company.Id = Convert.ToInt32(reader["companyId"].ToString());
+                    if (!reader.IsDBNull(reader.GetOrdinal("service_objectId")))
+                        issue.Service_object.Id = Convert.ToInt32(reader["service_objectId"].ToString());
+
+                    /*if (!reader.IsDBNull(reader.GetOrdinal("priorityName")))
                         issue.Priority.Name = reader["priorityName"].ToString();
                     if (!reader.IsDBNull(reader.GetOrdinal("priorityCode")))
                         issue.Priority.Code = reader["priorityCode"].ToString();
@@ -2673,8 +2670,6 @@ namespace AqbaServer.Data
                         issue.Priority.Position = Convert.ToInt32(reader["priorityPosition"].ToString());
                     if (!reader.IsDBNull(reader.GetOrdinal("priorityColor")))
                         issue.Priority.Color = reader["priorityColor"].ToString();
-                    if (!reader.IsDBNull(reader.GetOrdinal("typeId")))
-                        issue.Type.Id = Convert.ToInt32(reader["typeId"].ToString());
                     if (!reader.IsDBNull(reader.GetOrdinal("typeName")))
                         issue.Type.Name = reader["typeName"].ToString();
                     if (!reader.IsDBNull(reader.GetOrdinal("typeCode")))
@@ -2687,18 +2682,12 @@ namespace AqbaServer.Data
                         issue.Type.Type = reader["typeType"].ToString();
                     if (!reader.IsDBNull(reader.GetOrdinal("typeAvailable")))
                         issue.Type.Available_for_client = Convert.ToBoolean(reader["typeAvailable"]);
-                    if (!reader.IsDBNull(reader.GetOrdinal("statusId")))
-                        issue.Status.Id = Convert.ToInt32(reader["statusId"].ToString());
                     if (!reader.IsDBNull(reader.GetOrdinal("statusCode")))
                         issue.Status.Code = reader["statusCode"].ToString();
                     if (!reader.IsDBNull(reader.GetOrdinal("statusName")))
                         issue.Status.Name = reader["statusName"].ToString();
                     if (!reader.IsDBNull(reader.GetOrdinal("statusColor")))
-                        issue.Status.Color = reader["statusColor"].ToString();
-                    if (!reader.IsDBNull(reader.GetOrdinal("companyId")))
-                        issue.Company.Id = Convert.ToInt32(reader["companyId"].ToString());
-                    if (!reader.IsDBNull(reader.GetOrdinal("service_objectId")))
-                        issue.Service_object.Id = Convert.ToInt32(reader["service_objectId"].ToString());
+                        issue.Status.Color = reader["statusColor"].ToString();*/
 
                     return issue;
                 }

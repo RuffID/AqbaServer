@@ -9,8 +9,9 @@ namespace AqbaServer.Repository.OkdeskPerformance
 {
     public class IssueTypeRepository : IIssueTypeRepository
     {
-        public async Task<TaskType?> GetType(TaskType type)
+        public async Task<TaskType?> GetType(TaskType? type)
         {
+            if (type == null) return null;
             return await DBSelect.SelectType(type);
         }
 

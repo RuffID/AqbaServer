@@ -7,8 +7,8 @@ namespace AqbaServer.Interfaces.OkdeskPerformance
         Task<bool> UpdateIssue(Issue issue);
         Task<bool> CreateIssue(Issue issue);
         Task<Issue?> GetIssue(int issueId);
-        Task<List<int>?> GetIssues(int statusIdNot);
-        Task<Issue[]?> GetIssues(bool unknownIssues = false);
+        //Task<List<int>?> GetIssues(int statusIdNot);
+        Task<Issue[]?> GetNotClosedIssues(bool unknownIssues = false);
         Task<bool> UpdateIssueDictionary();
     }
 }

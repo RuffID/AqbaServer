@@ -9,8 +9,9 @@ namespace AqbaServer.Repository.OkdeskPerformance
 {
     public class IssueStatusRepository : IIssueStatusRepository
     {
-        public async Task<Status?> GetStatus(Status status)
+        public async Task<Status?> GetStatus(Status? status)
         {
+            if (status == null) return null;
             return await DBSelect.SelectIssueStatus(status);
         }
 

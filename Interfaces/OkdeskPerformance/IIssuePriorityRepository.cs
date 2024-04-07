@@ -5,7 +5,7 @@ namespace AqbaServer.Interfaces.OkdeskPerformance
 {
     public interface IIssuePriorityRepository
     {
-        Task<Priority?> GetPriority(Priority priority);
+        Task<Priority?> GetPriority(Priority? priority);
         Task<bool> CreatePriority(Priority priority);
         Task<bool> UpdatePriority(Priority priority);
         Task<bool> GetPriorityFromOkdesk();

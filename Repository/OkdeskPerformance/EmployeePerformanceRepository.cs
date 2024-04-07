@@ -103,84 +103,75 @@ namespace AqbaServer.Repository.OkdeskPerformance
 
             foreach (var employee in employees)
             {
-                if (employee?.Issues != null)
+                if (employee?.Issues == null) continue;
+
+                foreach (var issue in employee.Issues)
                 {
-                    foreach (var issue in employee.Issues)
-                    {
-                        // Присвоение id ответственного в полученную с окдеска заявку т.к. при получении id является null
-                        issue.Assignee_id = employee.Id;
+                    if (issue == null || issue.Id <= 0) continue;
+                    // Присвоение id ответственного в полученную с окдеска заявку т.к. при получении id является null
+                    issue.Assignee_id = employee.Id;
 
-                        Issue? issueFromDB = await _issueRepository.GetIssue(issue.Id);
+                    Issue? issueFromDB = await _issueRepository.GetIssue(issue.Id);
 
-                        // Если в БД уже есть такая заявка, то обновить
-                        if (issueFromDB != null)
-                            await _issueRepository.UpdateIssue(issue);
-
-                        // Если нет, то создать
-                        else
-                            await _issueRepository.CreateIssue(issue);
-                    }   
+                    // Если в БД уже есть такая заявка, то добавить, иначе обновить
+                    if (issueFromDB == null || issue.Id <= 0)
+                        await _issueRepository.CreateIssue(issue);
+                    else
+                        await _issueRepository.UpdateIssue(issue);
                 }
             }
 
             // Получить все заявки из БД, кроме тех что закрыты (id статуса "closed" = 10)            
 
-            List<int>? dbList = await _issueRepository.GetIssues(statusIdNot: 10);
+            Issue[]? dbList = await _issueRepository.GetNotClosedIssues(unknownIssues: true);
+
             // Здесь нужно найти задачи которые есть в БД, но нет в окдеске, чтобы найти потеряшки
-            if (dbList != null)
+            if (dbList == null) return;
+
+            foreach (var issue in dbList)
             {
-                foreach (int issueId in dbList)
-                {
-                    // Поиск заявки в списке открытых (полученных с сайта)                    
-                    if (!employees.Any(e => e?.Issues?.FirstOrDefault(i => i.Id == issueId)?.Id == issueId))
-                    {
-                        // Проверка заявки в БД, если точно есть, то обновить
-                        Issue? issue = await _issueRepository.GetIssue(issueId);
-                        if (issue != null)
-                        {
-                            // Если такой заявки нет на сайте в списке открытых, то присвоить статус "неизвестно"
-                            issue.Internal_status = "unknown";
-                            await _issueRepository.UpdateIssue(issue);
-                        }
-                    }
-                }
+                if (issue == null) continue;
+                // Поиск заявки в списке открытых (полученных с сайта), если нет, то проверить следующую заявку
+                if (employees.Any(e => e?.Issues?.FirstOrDefault(i => i.Id == issue.Id)?.Id == issue.Id)) continue;
+                                
+                // Если такой заявки нет на сайте в списке открытых, то присвоить статус "неизвестно" т.к. её закрыли/удалили/объединили
+                issue.Internal_status = "unknown";
+                await _issueRepository.UpdateIssue(issue);
             }
         }
 
         async Task<List<EmployeeDto>> GetOpenTasksFromDB()
         {
             List<Employee> employees = [];
-            Issue[]? issues = await _issueRepository.GetIssues(unknownIssues: false);
+            Issue[]? issues = await _issueRepository.GetNotClosedIssues(unknownIssues: false);
             List<EmployeeDto> employeesDto = [];
             
             if (issues == null || issues.Length == 0) return employeesDto;
-            
-
             // Проходит по всем найденным открытым заявкам в БД
             foreach (var issue in issues)
             {
-                if (issue.Assignee_id != null)
+                if (issue.Assignee_id == null) continue;
+
+                // Поиск сотрудника в самозаполняющемся списке
+                var employee = employees.FirstOrDefault(e => e.Id == issue.Assignee_id);
+                // Если сотрудник не был найден, то
+                if (employee == null)
                 {
-                    // Поиск сотрудника в самозаполняющемся списке
-                    var employee = employees.FirstOrDefault(e => e.Id == issue.Assignee_id);
-                    // Если не был найден, то
-                    if (employee == null)
-                    {
-                        // Создание нового сотрудника и добавление в коллекцию вместе с заявкой
-                        var tempEmp = new Employee() { Issues = [] };
-                        tempEmp.Id = (int)issue.Assignee_id;
-                        tempEmp.Issues.Add(issue);
-                        employees.Add(tempEmp);
-                    }
-                    else
-                    {
-                        // Если найден, то добавление заявки к найденному сотруднику
-                        employee.Issues ??= [];
-                        employee.Issues.Add(issue);
-                    }
+                    // Создание нового сотрудника и добавление в коллекцию вместе с заявкой
+                    var newEmployee = new Employee() { Issues = [] };
+                    newEmployee.Id = (int)issue.Assignee_id;
+                    newEmployee.Issues.Add(issue);
+                    employees.Add(newEmployee);
+                }
+                else
+                {
+                    // Если найден, то добавление заявки к найденному сотруднику
+                    employee.Issues ??= [];
+                    employee.Issues.Add(issue);
                 }
             }
 
+            // Конвертация employee в employeeDto и issue в IssueDto для вывода в API
             foreach (var employee in employees)
             {
                 var tempEmp = new EmployeeDto() { Issues = [] };
@@ -188,9 +179,8 @@ namespace AqbaServer.Repository.OkdeskPerformance
                 if (employee.Issues != null)
                 {
                     foreach (var issue in employee.Issues)
-                    {
                         tempIssues.Add(new IssueDto() { PriorityId = issue?.Priority?.Id, StatusId = issue?.Status?.Id, TypeId = issue?.Type?.Id });
-                    }
+
                     tempEmp.Id = employee.Id;
                     tempEmp.Issues = tempIssues.ToArray();
                 }

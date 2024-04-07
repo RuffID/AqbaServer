@@ -1,5 +1,6 @@
 ﻿using AqbaServer.Data;
 using AqbaServer.Dto;
+using AqbaServer.Helper;
 using AqbaServer.Interfaces.OkdeskEntities;
 using AqbaServer.Interfaces.OkdeskPerformance;
 using AqbaServer.Models.OkdeskPerformance;
@@ -40,17 +41,24 @@ namespace AqbaServer.Repository.OkdeskPerformance
 
         public async Task<Issue?> GetIssue(int issueId)
         {
-            return await DBSelect.SelectIssue(issueId);
+            Issue? issue = await DBSelect.SelectIssue(issueId);
+
+            if (issue == null) return null;
+
+            await CheckIssue(issue);
+
+            return issue;
         }
 
-        public async Task<List<int>?> GetIssues(int statusIdNot)
+        public async Task<Issue[]?> GetNotClosedIssues(bool unknownIssues = false)
         {
-            return await DBSelect.SelectIssues(statusIdNot);
-        }
-
-        public async Task<Issue[]?> GetIssues(bool unknownIssues = false)
-        {
-            return (await DBSelect.SelectIssues(unknownIssues))?.ToArray();
+            Status? closedStatus = await _statusRepository.GetStatus(new Status() { Code = "closed" });
+            if (closedStatus == null)
+            {
+                WriteLog.Error("[Method GetNotClosedIssues] Не удалось получить \"закрытый\" статус");
+                return null;
+            }
+            return (await DBSelect.SelectIssues(closedStatus, unknownIssues))?.ToArray();
         }
 
         public async Task<bool> UpdateIssueDictionary()

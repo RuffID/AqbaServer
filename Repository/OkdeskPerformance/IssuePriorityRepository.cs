@@ -9,8 +9,9 @@ namespace AqbaServer.Repository.OkdeskPerformance
 {
     public class IssuePriorityRepository : IIssuePriorityRepository
     {
-        public async Task<Priority?> GetPriority(Priority priority)
+        public async Task<Priority?> GetPriority(Priority? priority)
         {
+            if (priority == null) return null;
             return await DBSelect.SelectIssuePriority(priority);
         }
 

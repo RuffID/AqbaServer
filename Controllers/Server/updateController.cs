@@ -45,7 +45,6 @@ namespace AqbaServer.Controllers.Server
         {
             string fileName = "AqbaApp.exe";
             string directory = "Update";
-            WriteLog.Info($"Starting download - {fileName}");
 
             if (!Directory.Exists(directory))
                 Directory.CreateDirectory(directory);
