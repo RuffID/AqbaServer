@@ -14,7 +14,9 @@ namespace AqbaServer.Services
         {
             if (!string.IsNullOrEmpty(Config.OkdeskDomainLink))
             {
+                #if DEBUG
                 WriteLog.Info($"[Login method] Okdesk domain link: {Config.OkdeskDomainLink}");
+                #endif
                 await Request.Login(Immutable.OkdeskLoginLink, Immutable.OkdeskContentForLoginOnSite);
             }
             else
