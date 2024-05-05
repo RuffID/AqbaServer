@@ -9,6 +9,7 @@ namespace AqbaServer.Interfaces.OkdeskPerformance
         Task<bool> CreatePriority(Priority priority);
         Task<bool> UpdatePriority(Priority priority);
         Task<bool> GetPriorityFromOkdesk();
+        Task<bool> GetPrioritiesFromDBOkdesk();
         Task<ICollection<Priority>?> GetIssuePriorities();
     }
 }

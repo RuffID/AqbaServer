@@ -1,5 +1,6 @@
 ﻿using AqbaServer.API;
-using AqbaServer.Data;
+using AqbaServer.Data.MySql;
+using AqbaServer.Data.Postgresql;
 using AqbaServer.Dto;
 using AqbaServer.Helper;
 using AqbaServer.Interfaces.OkdeskPerformance;
@@ -28,6 +29,23 @@ namespace AqbaServer.Repository.OkdeskPerformance
         public async Task<bool> GetStatusFromOkdesk()
         {
             var statuses = await Request.GetStatuses();
+            
+            return await SaveOrUpdateInDB(statuses);
+        }
+
+        public async Task<bool> GetStatusesFromDBOkdesk()
+        {
+            var statuses = await PGSelect.SelectIssueStatuses();
+            return await SaveOrUpdateInDB(statuses?.ToArray());
+        }
+
+        public async Task<ICollection<Status>?> GetIssueStatuses()
+        {
+            return await DBSelect.SelectIssueStatuses();
+        }
+
+        async Task<bool> SaveOrUpdateInDB(Status[]? statuses)
+        {
             if (statuses == null || statuses.Length <= 0)
             {
                 WriteLog.Warn("null при получении issue statuses с окдеска");
@@ -48,15 +66,8 @@ namespace AqbaServer.Repository.OkdeskPerformance
                     if (!await UpdateStatus(status))
                         return false;
                 }
-                
             }
             return true;
-
-        }
-
-        public async Task<ICollection<Status>?> GetIssueStatuses()
-        {
-            return await DBSelect.SelectIssueStatuses();
         }
     }
 }

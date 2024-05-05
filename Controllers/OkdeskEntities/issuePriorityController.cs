@@ -35,6 +35,17 @@ namespace AqbaServer.Controllers.OkdeskEntities
                 return BadRequest(ModelState);
 
             return Ok(priorities);
-        }        
+        }
+
+        [HttpGet("okdesk")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(500)]
+        public async Task<IActionResult> GetIssuePrioritiesFromOkdesk()
+        {
+            if (await _issuePriorityRepository.GetPrioritiesFromDBOkdesk() == false)
+                return StatusCode(500, "Внутренняя ошибка при получении приоритетов из БД окдеска");
+
+            return Ok("Приоритеты успешно обновлены");
+        }
     }
 }

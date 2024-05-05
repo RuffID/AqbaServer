@@ -1,7 +1,7 @@
 using AqbaServer.Helper;
 using MySql.Data.MySqlClient;
 
-namespace AqbaServer.Data
+namespace AqbaServer.Data.MySql
 {
     public class DBConfig
     {
@@ -15,7 +15,7 @@ namespace AqbaServer.Data
 
             return GetDBConnection(host, port, database, username, password);
         }
-        public static MySqlConnection GetDBConnection(string host, int port, string database, string username, string password)
+        static MySqlConnection GetDBConnection(string host, int port, string database, string username, string password)
         {
             // Connection String.
             if (string.IsNullOrEmpty(Config.ConnectionString))

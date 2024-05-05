@@ -19,7 +19,7 @@ namespace AqbaServer.Models.OkdeskPerformance
         [JsonProperty("value")]
         public string? Value { get; set; }
 
-        public KindParameter KindParam { get; set; }
-        public Equipment Equipment { get; set; }
+        public KindParameter? KindParam { get; set; }
+        public Equipment? Equipment { get; set; }
     }
 }

@@ -9,6 +9,7 @@ namespace AqbaServer.Interfaces.OkdeskPerformance
         Task<bool> CreateStatus(Status status);
         Task<bool> UpdateStatus(Status status);
         Task<bool> GetStatusFromOkdesk();
+        Task<bool> GetStatusesFromDBOkdesk();
         Task<ICollection<Status>?> GetIssueStatuses();
     }
 }

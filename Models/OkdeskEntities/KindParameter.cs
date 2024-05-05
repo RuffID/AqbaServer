@@ -15,5 +15,8 @@ namespace AqbaServer.Models.OkdeskPerformance
 
         [JsonProperty("field_type")]
         public string? FieldType { get; set; }
+
+        [JsonProperty("equipment_kind_codes")]
+        public string[]? Equipment_kind_codes { get; set; }
     }
 }

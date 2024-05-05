@@ -35,6 +35,17 @@ namespace AqbaServer.Controllers.OkdeskEntities
                 return BadRequest(ModelState);
 
             return Ok(statuses);
-        }        
+        }
+
+        [HttpGet("okdesk")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(500)]
+        public async Task<IActionResult> GetIssueStatusesFromOkdesk()
+        {
+            if (await _issueStatusRepository.GetStatusesFromDBOkdesk() == false)
+                return StatusCode(500, "Внутренняя ошибка при получении статусов из БД окдеска");
+
+            return Ok("Статусы успешно обновлены");
+        }
     }
 }

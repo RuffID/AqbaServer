@@ -1,6 +1,6 @@
 ﻿using AqbaServer.API;
-using AqbaServer.Data;
-using AqbaServer.Dto;
+using AqbaServer.Data.MySql;
+using AqbaServer.Data.Postgresql;
 using AqbaServer.Helper;
 using AqbaServer.Interfaces.OkdeskPerformance;
 using AqbaServer.Models.OkdeskReport;
@@ -28,6 +28,24 @@ namespace AqbaServer.Repository.OkdeskPerformance
         public async Task<bool> GetPriorityFromOkdesk()
         {
             var priorities = await Request.GetPriorities();
+            
+            return await SaveOrUpdateInDB(priorities);
+        }
+
+        public async Task<bool> GetPrioritiesFromDBOkdesk()
+        {
+            var priorities = await PGSelect.SelectIssuePriorities();
+
+            return await SaveOrUpdateInDB(priorities?.ToArray());
+        }
+
+        public async Task<ICollection<Priority>?> GetIssuePriorities()
+        {
+            return await DBSelect.SelectIssuePriorities();
+        }
+
+        async Task<bool> SaveOrUpdateInDB(Priority[]? priorities)
+        {
             if (priorities == null || priorities.Length <= 0)
             {
                 WriteLog.Warn("null при получении issue priorities с окдеска");
@@ -48,15 +66,9 @@ namespace AqbaServer.Repository.OkdeskPerformance
                     if (!await UpdatePriority(priority))
                         return false;
                 }
-                
+
             }
             return true;
-
-        }
-
-        public async Task<ICollection<Priority>?> GetIssuePriorities()
-        {
-            return await DBSelect.SelectIssuePriorities();
         }
     }
 }

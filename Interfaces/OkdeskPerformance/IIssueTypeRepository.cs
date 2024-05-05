@@ -5,10 +5,11 @@ namespace AqbaServer.Interfaces.OkdeskPerformance
 {
     public interface IIssueTypeRepository
     {
-        Task<TaskType?> GetType(TaskType? type);
-        Task<bool> CreateType(TaskType type);
-        Task<bool> UpdateType(TaskType type);
+        Task<IssueType?> GetType(IssueType? type);
+        Task<bool> CreateType(IssueType type);
+        Task<bool> UpdateType(IssueType type);
         Task<bool> GetTypesFromOkdesk();
-        Task<ICollection<TaskType>?> GetIssueTypes();
+        Task<bool> GetTypesFromDBOkdesk();
+        Task<ICollection<IssueType>?> GetIssueTypes();
     }
 }

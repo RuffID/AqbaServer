@@ -2,7 +2,7 @@
 
 namespace AqbaServer.Models.OkdeskReport
 {
-    public class TaskType
+    public class IssueType
     {
         [JsonIgnore]
         public int? Id { get; set; }
@@ -12,12 +12,12 @@ namespace AqbaServer.Models.OkdeskReport
         public bool? Inner { get; set; }
         public bool? Available_for_client { get; set; }
         public string? Type { get; set; }
-        public TaskType[]? Children { get; set; }
+        public IssueType[]? Children { get; set; }
         
 
-        public TaskType() { }
+        public IssueType() { }
 
-        public TaskType(TaskType taskType)
+        public IssueType(IssueType taskType)
         {
             Id = taskType.Id;
             Name = taskType.Name;

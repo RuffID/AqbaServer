@@ -1,4 +1,4 @@
-﻿using AqbaServer.Data;
+﻿using AqbaServer.Data.MySql;
 using AqbaServer.Interfaces.OkdeskEntities;
 using AqbaServer.Models.OkdeskPerformance;
 
@@ -6,20 +6,9 @@ namespace AqbaServer.Repository.OkdeskEntities
 {
     public class EquipmentParameterRepository : IEquipmentParameterRepository
     {
-        private readonly IKindParameterRepository _kindParameterRepository;
-        public EquipmentParameterRepository(IKindParameterRepository kindParameterRepository)
+        public async Task<bool> CreateEquipmentParameter(EquipmentParameter? equipmentParameter)
         {
-            _kindParameterRepository = kindParameterRepository;
-        }
-
-        public async Task<bool> CreateEquipmentParameter(EquipmentParameter equipmentParameter, Equipment equipment)
-        {
-            if (equipmentParameter.Value == null || equipmentParameter.Value == "")
-                return true;
-
-            var kindParameter = await _kindParameterRepository.GetKindParameter(equipmentParameter.Code);
-            equipmentParameter.Equipment = equipment;
-            equipmentParameter.KindParam = kindParameter;
+            if (equipmentParameter == null) return false;            
 
             return await DBInsert.InsertEquipmentParameter(equipmentParameter);
         }
@@ -29,20 +18,19 @@ namespace AqbaServer.Repository.OkdeskEntities
             return await DBDelete.DeleteEquipmentParameter(equipmentParameterId);
         }
 
-        public async Task<ICollection<EquipmentParameter>> GeEquipmentParameters()
+        public async Task<ICollection<EquipmentParameter>?> GeEquipmentParameters()
         {
             return await DBSelect.SelectEquipmentParameters();
         }
 
-        public async Task<EquipmentParameter> GetEquipmentParameter(int equipmentId, int kindParamid)
+        public async Task<EquipmentParameter?> GetEquipmentParameter(int equipmentId, int kindParamid)
         {
             return await DBSelect.SelectEquipmentParameter(equipmentId, kindParamid);
         }
 
-        public async Task<bool> UpdateEquipmentParameter(int equipmentParameterId, EquipmentParameter equipmentParameter)
+        public async Task<bool> UpdateEquipmentParameter(int equipmentParameterId, EquipmentParameter? equipmentParameter)
         {
-            if (equipmentParameter.Value == null || equipmentParameter.Value == "")
-                return true;
+            if (equipmentParameter == null) return false;
 
             return await DBUpdate.UpdateEquipmentParameter(equipmentParameterId, equipmentParameter);
         }

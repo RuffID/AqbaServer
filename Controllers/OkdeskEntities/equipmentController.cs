@@ -33,7 +33,7 @@ namespace AqbaServer.Controllers.OkdeskEntities
         }
 
         [HttpGet("list")]
-        [ProducesResponseType(200, Type = typeof(IEnumerable<Equipment>))]
+        [ProducesResponseType(200, Type = typeof(IEnumerable<EquipmentDto>))]
         [ProducesResponseType(400)]
         public async Task<IActionResult> GetEquipments([FromQuery] int equipmentId)
         {
@@ -49,7 +49,7 @@ namespace AqbaServer.Controllers.OkdeskEntities
         }
 
         [HttpGet("maintenanceEntity")]
-        [ProducesResponseType(200, Type = typeof(IEnumerable<Equipment>))]
+        [ProducesResponseType(200, Type = typeof(IEnumerable<EquipmentDto>))]
         [ProducesResponseType(400)]
         public async Task<IActionResult> GetEquipmentsByMaintenanceEntity([FromQuery] int maintenanceEntityId)
         {
@@ -65,7 +65,7 @@ namespace AqbaServer.Controllers.OkdeskEntities
         }
 
         [HttpGet("company")]
-        [ProducesResponseType(200, Type = typeof(IEnumerable<Equipment>))]
+        [ProducesResponseType(200, Type = typeof(IEnumerable<EquipmentDto>))]
         [ProducesResponseType(400)]
         public async Task<IActionResult> GetEquipmentsByCompany([FromQuery] int companyId)
         {
@@ -85,7 +85,7 @@ namespace AqbaServer.Controllers.OkdeskEntities
         [ProducesResponseType(400)]
         public async Task<IActionResult> GetEquipment([FromQuery] int equipmentId)
         {
-            if (!await _equipmentRepository.GetEquipmentsFromOkdesk(equipmentId, pageSize: 1))
+            if (!await _equipmentRepository.UpdateEquipmentsFromAPIOkdesk(equipmentId, pageSize: 1))
             {
                 ModelState.AddModelError("", "Something went wrong when retrieving equipments from okdesk");
                 return StatusCode(500, ModelState);
@@ -142,13 +142,24 @@ namespace AqbaServer.Controllers.OkdeskEntities
         [ProducesResponseType(200)]
         public async Task<IActionResult> GetEquipmentsFromOkdesk([FromQuery] int lastEquipmentId = 0)
         {
-            if (!await _equipmentRepository.GetEquipmentsFromOkdesk(lastEquipmentId))
+            if (!await _equipmentRepository.UpdateEquipmentsFromAPIOkdesk(lastEquipmentId))
             {
                 ModelState.AddModelError("", "Something went wrong when retrieving equipments from okdesk");
                 return StatusCode(500, ModelState);
             }
 
             return Ok();
+        }
+
+        [HttpGet("okdeskDB"), Authorize(Roles = UserRole.Admin)]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(500)]
+        public async Task<IActionResult> GetEquipmentsFromDBOkdesk([FromQuery] long lastEquipmentId = 0)
+        {
+            if (await _equipmentRepository.UpdateEquipmentsFromDBOkdesk(lastEquipmentId) == false)
+                return StatusCode(500, "Внутренняя ошибка при получении equipments из БД окдеска");
+
+            return Ok("Оборудование успешно обновлено");
         }
 
         [HttpPut, Authorize(Roles = UserRole.Admin)]

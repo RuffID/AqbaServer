@@ -1,37 +1,42 @@
 ﻿using AqbaServer.API;
-using AqbaServer.Data;
+using AqbaServer.Data.MySql;
+using AqbaServer.Data.Postgresql;
+using AqbaServer.Helper;
 using AqbaServer.Interfaces.OkdeskEntities;
 using AqbaServer.Models.OkdeskPerformance;
+using AqbaServer.Models.OkdeskReport;
 
 namespace AqbaServer.Repository.OkdeskEntities
 {
     public class KindRepository : IKindRepository
     {
-        public async Task<bool> CreateKind(Kind kind)
+        /*private readonly IKindParameterRepository _kindParameterRepository;
+        private readonly IKindParamRepository _kindParamRepository;
+        public KindRepository(IKindParameterRepository kindParameterRepository, IKindParamRepository kindParamRepository) 
         {
+            _kindParameterRepository = kindParameterRepository;
+            _kindParamRepository = kindParamRepository;
+        }*/
+
+        public async Task<bool> CreateKind(Kind? kind)
+        {
+            if (kind == null) return false;
             return await DBInsert.InsertKind(kind);
         }
 
-        public async Task<bool> GetKindsFromOkdesk()
+        public async Task<bool> UpdateKindsFromAPIOkdesk()
         {
             var kinds = await OkdeskEntitiesRequest.GetKinds();
             if (kinds == null || kinds.Count <= 0) return false;
 
-            foreach (var kind in kinds)
-            {
-                var tempKind = await GetKind(kind?.Code);
-                if (tempKind == null)
-                {
-                    if (!await CreateKind(kind))
-                        return false;
-                }
-                else if (tempKind != null)
-                {
-                    if (!await UpdateKind(tempKind?.Code, kind))
-                        return false;
-                }
-            }
-            return true;
+            return await SaveOrUpdateInDB(kinds);
+        }
+
+        public async Task<bool> UpdateKindsFromDBOkdesk()
+        {
+            var kinds = await PGSelect.SelectKinds();
+
+            return await SaveOrUpdateInDB(kinds);
         }
 
         public async Task<bool> DeleteKind(int kindId)
@@ -42,19 +47,75 @@ namespace AqbaServer.Repository.OkdeskEntities
             else return false;
         }
 
-        public async Task<Kind> GetKind(string kindCode)
+        public async Task<Kind?> GetKind(string? kindCode)
         {
+            if (kindCode == null) return null;
             return await DBSelect.SelectKind(kindCode);
         }
 
-        public async Task<ICollection<Kind>> GetKinds()
+        public async Task<ICollection<Kind>?> GetKinds()
         {
             return await DBSelect.SelectKinds();
         }
 
-        public async Task<bool> UpdateKind(string kindName, Kind kindMap)
+        public async Task<bool> UpdateKind(string? kindCode, Kind? kindMap)
         {
-            return await DBUpdate.UpdateKind(kindName, kindMap);
+            if (string.IsNullOrEmpty(kindCode) || kindMap == null) return false;
+            return await DBUpdate.UpdateKind(kindCode, kindMap);
+        }        
+
+        async Task<bool> SaveOrUpdateInDB(ICollection<Kind>? kinds)
+        {
+            if (kinds == null || kinds.Count <= 0)
+            {
+                WriteLog.Warn("null при получении issue types с окдеска");
+                return false;
+            }
+
+            foreach (var kind in kinds)
+            {
+                var tempKind = await GetKind(kind.Code);
+
+                if (tempKind == null)
+                {
+                    if (!await CreateKind(kind))
+                        return false;
+                }
+                else if (tempKind != null)
+                {
+                    if (!await UpdateKind(kind.Name, kind))
+                        return false;
+                }
+
+                /*// В данном цикле обновляется таблица kind param для связей между kind и kind_parameters
+                if (kind.Parameters != null && kind.Parameters.Count > 0)
+                {
+                    foreach (var param in kind.Parameters)
+                    {
+                        // Получение id kind parameter, но есть ньюанс, если в базе два kind_parameters несколько параметров с одинаковым именем (name), то возникнут ошибки...
+                        // Пока это не буду фиксить, надеюсь что такого не произойдёт,
+                        // но вообще написал в окдеск чтобы они дали нормально парсить эти связи без подобных танцов с бубнами
+                        var kindParameter = await _kindParameterRepository.GetKindParameterByName(param.Name);
+                        if (kindParameter != null)
+                        {
+                            // Т.к. неизвестно обновился kind или был создан нельзя узнать точный id и поэтому запрашивает его ещё раз
+                            var tempTempKind = await GetKind(kind.Code);
+                            // Проверка на всякий случай
+                            if (tempTempKind != null)
+                            {
+                                // Уточнение есть ли уже связь между kind и kind parameter в таблице kind_param
+                                var kindParamConnect = await _kindParamRepository.GetKindParam(tempTempKind.Id, kindParameter.Id);
+
+                                // Если связи нет, то создаёт
+                                if (kindParamConnect == false)
+                                    await _kindParamRepository.CreateKindParam(tempTempKind.Id, kindParameter.Id);
+                            }
+                        }
+
+                    }
+                }*/
+            }
+            return true;
         }
     }
 }

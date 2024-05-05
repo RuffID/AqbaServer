@@ -35,8 +35,8 @@ namespace AqbaServer.Helper
             CreateMap<Status, StatusDto>();
             CreateMap<PriorityDto, Priority>();
             CreateMap<Priority, PriorityDto>();
-            CreateMap<TaskTypeDto, TaskType>();
-            CreateMap<TaskType, TaskTypeDto>();
+            CreateMap<TaskTypeDto, IssueType>();
+            CreateMap<IssueType, TaskTypeDto>();
         }
     }
 }

@@ -1,6 +1,6 @@
-﻿using AqbaServer.Data;
-using AqbaServer.Dto;
-using AqbaServer.Helper;
+﻿using AqbaServer.API;
+using AqbaServer.Data.MySql;
+using AqbaServer.Data.Postgresql;
 using AqbaServer.Interfaces.OkdeskEntities;
 using AqbaServer.Interfaces.OkdeskPerformance;
 using AqbaServer.Models.OkdeskPerformance;
@@ -27,57 +27,100 @@ namespace AqbaServer.Repository.OkdeskPerformance
 
         public async Task<bool> UpdateIssue(Issue issue)
         {
-            await CheckIssue(issue);
-
-            return await DBUpdate.UpdateIssue(issue);
+            if (await CheckIssue(issue))
+                return await DBUpdate.UpdateIssue(issue);
+            else return false;
         }
 
         public async Task<bool> CreateIssue(Issue issue)
         {
-            await CheckIssue(issue);
-
-            return await DBInsert.InsertIssue(issue);
+            if (await CheckIssue(issue))
+                return await DBInsert.InsertIssue(issue);
+            else return false;
         }
 
         public async Task<Issue?> GetIssue(int issueId)
         {
-            Issue? issue = await DBSelect.SelectIssue(issueId);
-
-            if (issue == null) return null;
-
-            await CheckIssue(issue);
-
-            return issue;
+            return await DBSelect.SelectIssue(issueId);
         }
 
-        public async Task<Issue[]?> GetNotClosedIssues(bool unknownIssues = false)
+        public async Task<IssueJSON?> GetIssueFromOkdesk(int issueId)
         {
-            Status? closedStatus = await _statusRepository.GetStatus(new Status() { Code = "closed" });
-            if (closedStatus == null)
+            return await Request.GetIssue(issueId);
+        }
+
+        public async Task<ICollection<Issue>?> GetIssuesByUpdatedDate(DateTime updatedFrom, DateTime updatedTo)
+        {
+            return await DBSelect.SelectIssues(updatedFrom, updatedTo);
+        }
+
+        public async Task<ICollection<Issue>?> GetOpenAndCompletedOrClosedIssues(DateTime dateFrom, DateTime dateTo, int employeeId)
+        {
+            return await DBSelect.SelectOpenAndCompletedIssues(dateFrom, dateTo, employeeId);
+        }
+
+        public async Task<int> GetCompletedOrClosedIssues(DateTime closedOrCompletedFrom, DateTime closedOrCompletedTo, int employeeId)
+        {
+            int? numberOfCompletedOrClosedIssues = await DBSelect.SelectCountCompletedOrClosedIssues(closedOrCompletedFrom, closedOrCompletedTo, employeeId);
+            return numberOfCompletedOrClosedIssues == null ? 0 : (int)numberOfCompletedOrClosedIssues;
+        }
+
+        public async Task<ICollection<Issue>?> GetIssuesFromAPIOkdesk(DateTime updatedSinceFrom, DateTime updatedUntilTo, int assignee_id)
+        {
+            var issuesFromOkdeskAPI = await Request.GetUpdatedIssues(updatedSinceFrom, updatedUntilTo, assignee_id);
+
+            if (!await SaveOrUpdateInDB(issuesFromOkdeskAPI))
+                return null;            
+            
+            return issuesFromOkdeskAPI;
+        }
+
+        public async Task<bool> UpdateIssuesFromDBOkdesk(DateTime dateFrom, DateTime dateTo)
+        {
+            ICollection<Issue>? issues = [];
+            long lastIssueId = 0;
+            while (true)
             {
-                WriteLog.Error("[Method GetNotClosedIssues] Не удалось получить \"закрытый\" статус");
-                return null;
-            }
-            return (await DBSelect.SelectIssues(closedStatus, unknownIssues))?.ToArray();
-        }
+                if (issues.Count > 0)
+                    lastIssueId = issues.Last().Id;
+                #if DEBUG
+                await Console.Out.WriteLineAsync($"[Method: {nameof(UpdateIssuesFromDBOkdesk)}] Last issue ID: " + lastIssueId);
+                #endif
 
-        public async Task<bool> UpdateIssueDictionary()
+                issues = await PGSelect.SelectIssues(dateFrom, dateTo, lastIssueId);
+
+                if (issues == null || issues.Count <= 0)
+                    break;    
+                else await SaveOrUpdateInDB(issues);
+
+                if (issues.Count < PGSelect.limit)
+                {
+                    #if DEBUG
+                    await Console.Out.WriteLineAsync($"[Method: {nameof(UpdateIssuesFromDBOkdesk)} has been completed]");
+                    #endif
+                    break;
+                }
+            }
+            return true;
+        }        
+
+        public async Task<bool> UpdateIssueDictionaryFromDB()
         {
-            if (!await _typeRepository.GetTypesFromOkdesk())
+            if (!await _typeRepository.GetTypesFromDBOkdesk())
                 return false;
-            if (!await _priorityRepository.GetPriorityFromOkdesk())
+            if (!await _priorityRepository.GetPrioritiesFromDBOkdesk())
                 return false;
-            if (!await _statusRepository.GetStatusFromOkdesk())
+            if (!await _statusRepository.GetStatusesFromDBOkdesk())
                 return false;
 
             return true;
         }
 
-        async Task CheckIssue(Issue issue)
+        async Task<bool> CheckIssue(Issue issue)
         {
             Status? status = null;
             Priority? priority = null;
-            TaskType? type = null;
+            IssueType? type = null;
             Company? company = null;
             MaintenanceEntity? maintenanceEntity = null;
 
@@ -97,6 +140,31 @@ namespace AqbaServer.Repository.OkdeskPerformance
             issue.Type = type;
             issue.Company = company;
             issue.Service_object = maintenanceEntity;
+
+            return true;
+        }
+
+        async Task<bool> SaveOrUpdateInDB(ICollection<Issue>? issues)
+        {
+            if (issues != null && issues.Count > 0)
+            {
+                foreach (var issue in issues)
+                {
+                    var tempIssue = await GetIssue(issue.Id);
+
+                    if (tempIssue == null)
+                    {
+                        if (!await CreateIssue(issue))
+                            return false;
+                    }
+                    else if (tempIssue != null)
+                    {
+                        if (!await UpdateIssue(issue))
+                            return false;
+                    }
+                }
+            }
+            return true;
         }
     }
 }

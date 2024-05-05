@@ -12,10 +12,12 @@ namespace AqbaServer.Controllers.OkdeskEntities
     public class groupController : Controller
     {
         private readonly IGroupRepository _groupRepository;
+        private readonly IEmployeeGroupsRepository _employeeGroupsRepository;
 
-        public groupController(IGroupRepository groupRepository)
+        public groupController(IGroupRepository groupRepository, IEmployeeGroupsRepository employeeGroupsRepository)
         {
             _groupRepository = groupRepository;
+            _employeeGroupsRepository = employeeGroupsRepository;
         }
 
         [HttpGet]
@@ -46,6 +48,28 @@ namespace AqbaServer.Controllers.OkdeskEntities
             }
 
             return Ok();
+        }
+
+        [HttpGet("okdeskDB")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(500)]
+        public async Task<IActionResult> GetGroupsFromDBOkdesk()
+        {
+            if (await _groupRepository.GetGroupsFromDBOkdesk() == false)
+                return StatusCode(500, "Something went wrong when retrieving groups from SQL API okdesk");
+
+            return Ok("Группы успешно обновлены");
+        }
+
+        [HttpGet("employee_groups_update")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(500)]
+        public async Task<IActionResult> UpdateEmployeeGroupsFromDBOkdesk()
+        {
+            if (await _employeeGroupsRepository.UpdateEmployeeGroupsFromDBOkdesk() == false)
+                return StatusCode(500, "Что то пошло не так при обновлении связей групп и сотрудников через SQL API окдеска");
+
+            return Ok("Связи групп и сотрудников успешно обновлены");
         }
     }
 }

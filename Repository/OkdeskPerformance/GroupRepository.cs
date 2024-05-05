@@ -1,5 +1,6 @@
 ﻿using AqbaServer.API;
-using AqbaServer.Data;
+using AqbaServer.Data.MySql;
+using AqbaServer.Data.Postgresql;
 using AqbaServer.Helper;
 using AqbaServer.Interfaces.OkdeskPerformance;
 using AqbaServer.Models.OkdeskReport;
@@ -8,13 +9,13 @@ namespace AqbaServer.Repository.OkdeskPerformance
 {
     public class GroupRepository : IGroupRepository
     {
-        private readonly IEmployeeRepository _employeeRepository;
+        /*private readonly IEmployeeRepository _employeeRepository;
         private readonly IEmployeeGroupsRepository _employeeGroupsRepository;
         public GroupRepository(IEmployeeRepository employeeRepository, IEmployeeGroupsRepository employeeGroupsRepository)
         {
             _employeeGroupsRepository = employeeGroupsRepository;
             _employeeRepository = employeeRepository;
-        }
+        }*/
         public async Task<Group?> GetGroup(Group group)
         {
             return await DBSelect.SelectGroup(group.Id);
@@ -25,7 +26,7 @@ namespace AqbaServer.Repository.OkdeskPerformance
             return await DBInsert.InsertGroup(group);
         }
 
-        public async Task<List<Group>?> GetGroups()
+        public async Task<ICollection<Group>?> GetGroups()
         {
             return await DBSelect.SelectGroups();
         }
@@ -38,6 +39,19 @@ namespace AqbaServer.Repository.OkdeskPerformance
         public async Task<bool> GetGroupsFromOkdesk()
         {
             var groups = await Request.GetGroups();
+
+            return await SaveOrUpdateInDB(groups);
+        }
+
+        public async Task<bool> GetGroupsFromDBOkdesk()
+        {
+            var groups = await PGSelect.SelectEmployeeGroups();
+
+            return await SaveOrUpdateInDB(groups?.ToArray());
+        }
+
+        async Task<bool> SaveOrUpdateInDB(Group[]? groups)
+        {
             if (groups == null || groups.Length <= 0)
             {
                 WriteLog.Warn("null при получении groups с окдеска");
@@ -59,7 +73,7 @@ namespace AqbaServer.Repository.OkdeskPerformance
                         return false;
                 }
 
-                if (group?.Employees?.Count > 0)
+                /*if (group?.Employees?.Count > 0)
                 {
                     foreach (var employee in group.Employees)
                     {
@@ -69,10 +83,9 @@ namespace AqbaServer.Repository.OkdeskPerformance
                         if (!await _employeeGroupsRepository.GetEmployeeGroup(tempEmp.Id, group.Id))
                             await _employeeGroupsRepository.CreateEmployeeGroup(tempEmp.Id, group.Id);
                     }
-                }
+                }*/
             }
             return true;
-
         }
     }
 }

@@ -5,7 +5,7 @@ namespace AqbaServer.Interfaces.Authorization
     public interface IUserRepository
     {
         Task<User?> GetUser(string userEmail);
-        Task<List<User>?> GetUsers();
+        Task<ICollection<User>?> GetUsers();
         Task<string?> GetUserRole(string apiKey);
         Task<bool> CreateUser(User user);
         string? GenerateToken(User user);

@@ -25,7 +25,7 @@ namespace AqbaServer.Controllers.OkdeskEntities
         }
 
         [HttpGet("list")]
-        [ProducesResponseType(200, Type = typeof(IEnumerable<MaintenanceEntity>))]
+        [ProducesResponseType(200, Type = typeof(IEnumerable<MaintenanceEntityDto>))]
         [ProducesResponseType(400)]
         public async Task<IActionResult> GetMaintenanceEntities([FromQuery] int maintenanceEntityId)
         {
@@ -41,12 +41,12 @@ namespace AqbaServer.Controllers.OkdeskEntities
         }
 
         [HttpGet]
-        [ProducesResponseType(200, Type = typeof(MaintenanceEntity))]
+        [ProducesResponseType(200, Type = typeof(MaintenanceEntityDto))]
         [ProducesResponseType(400)]
         [ProducesResponseType(500)]
         public async Task<IActionResult> GetMaintenanceEntitiy([FromQuery] int maintenanceEntityId)
         {
-            if (!await _maintenanceEntityRepository.GetMaintenanceEntitiesFromOkdesk(maintenanceEntityId, pageSize: 1))
+            if (!await _maintenanceEntityRepository.UpdateMaintenanceEntitiesFromOkdesk(maintenanceEntityId, pageSize: 1))
             {
                 ModelState.AddModelError("", "Something went wrong when retrieving maintenance entity from okdesk");
                 return StatusCode(500, ModelState);
@@ -63,18 +63,57 @@ namespace AqbaServer.Controllers.OkdeskEntities
             return Ok(maintenanceEntity);
         }
 
+        [HttpGet("update_maintenance_entities")]
+        [ProducesResponseType(200, Type = typeof(Models.OkdeskEntities.UpdateInformation))]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        public async Task<IActionResult> UpdateMaintenanceEntitiesDirectories([FromQuery] int maintenanceEntityId)
+        {
+            if(!await _maintenanceEntityRepository.UpdateMaintenanceEntitiesFromOkdesk(maintenanceEntityId, pageSize: 1))
+                return BadRequest("Не удалось обновить информацию по maintenance entiry id");
+
+            var (objects, equipments) = await _maintenanceEntityRepository.GetUpdatingMaintenanceEntities(maintenanceEntityId: maintenanceEntityId);
+
+            if (objects == null || equipments == null)
+                return NotFound("Не удалось обновить информацию по объектам обслуживания");
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            Models.OkdeskEntities.UpdateInformation? directory = new();
+            directory.Company = null;
+            directory.MaintenanceEntity = objects;
+
+            var equipmentDto = _mapper.Map<ICollection<EquipmentDto>>(equipments);
+
+            directory.Equipments = equipmentDto;
+
+            return Ok(directory);
+        }
+
         [HttpGet("okdesk"), Authorize(Roles = UserRole.Admin)]
         [ProducesResponseType(500)]
         [ProducesResponseType(200)]
         public async Task<IActionResult> GetMaintenanceEntitiesFromOkdesk()
         {
-            if (!await _maintenanceEntityRepository.GetMaintenanceEntitiesFromOkdesk())
+            if (!await _maintenanceEntityRepository.UpdateMaintenanceEntitiesFromOkdesk())
             {
                 ModelState.AddModelError("", "Something went wrong when retrieving maintenance entities from okdesk");
                 return StatusCode(500, ModelState);
             }
 
             return Ok();
+        }
+
+        [HttpGet("okdeskDB"), Authorize(Roles = UserRole.Admin)]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(500)]
+        public async Task<IActionResult> GetMaintenanceEntitiesFromDBOkdesk()
+        {
+            if (await _maintenanceEntityRepository.UpdateMaintenanceEntitiesFromDBOkdesk() == false)
+                return StatusCode(500, "Something went wrong when retrieving maintenance entities from DB okdesk");
+
+            return Ok("Объекты успешно обновлены");
         }
 
         [HttpPost, Authorize(Roles = UserRole.Admin)]

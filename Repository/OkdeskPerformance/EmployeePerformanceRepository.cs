@@ -1,8 +1,7 @@
-﻿using AqbaServer.Data;
-using AqbaServer.API;
-using AqbaServer.Models.OkdeskPerformance;
+﻿using AqbaServer.Models.OkdeskPerformance;
 using AqbaServer.Dto;
 using AqbaServer.Interfaces.OkdeskPerformance;
+using AqbaServer.Services;
 
 namespace AqbaServer.Repository.OkdeskPerformance
 {
@@ -10,199 +9,159 @@ namespace AqbaServer.Repository.OkdeskPerformance
     {
         private readonly IEmployeeRepository _employeeRepository;
         private readonly IIssueRepository _issueRepository;
-        public EmployeePerformanceRepository(IEmployeeRepository employeeRepository, IIssueRepository issueRepository) 
+        private readonly ITimeEntryRepository _timeEntryRepository;
+        
+        public EmployeePerformanceRepository(IEmployeeRepository employeeRepository, IIssueRepository issueRepository, ITimeEntryRepository timeEntryRepository) 
         {
             _employeeRepository = employeeRepository;
             _issueRepository = issueRepository;
+            _timeEntryRepository = timeEntryRepository;
         }
 
-        public async Task<EmployeeDto?> GetEmployeePerformance(int employeeId, DateTime date)
+        public async Task<bool> UpdatePerformanceFromOkdeskAPI(DateTime dateFrom, DateTime dateTo)
         {
-            return await DBSelect.SelectEmployeePerformance(employeeId, date);
-        }
+            // В этом методы обновляются все заявки и списанное время с okdesk API
 
-        public async Task<List<EmployeeDto>?> GetEmployeesPerformance(DateTime dateFrom, DateTime dateTo)
-        {
-            var employeesCurrentTasks = await GetOpenTasksFromDB();
-            var employeesTaskAndTime = await DBSelect.SelectEmployeesPerformance(dateFrom, dateTo);
+            ThirtyMinutesReportService.TimeOfLastUpdateRequest = DateTime.Now;
 
-            // Объединение двух списков
-            if (employeesTaskAndTime != null)
-            {
-                foreach (var employee in employeesTaskAndTime)
-                {
-                    // Поиск сотрудника в списке текущих заявок
-                    var emp = employeesCurrentTasks?.FirstOrDefault(e => e.Id == employee.Id);
-                    // Если был найден, то
-                    if (emp != null)
-                    {
-                        // Добавление значений списанного времени и решённых заявок к сотруднику со списком текущих заявок
-                        emp.SolvedTasks = employee.SolvedTasks;
-                        emp.SpentedTime = employee.SpentedTime;
-                    }
-                    else
-                    {
-                        // Если не был найден, то добавить в коллекцию текущих заявок без списка текущих
-                        employeesCurrentTasks?.Add(employee);
-                    }
-                }
-            }
+            ICollection<Issue>? issues = [];
+            // Получение списка сотрудников из локальной БД
+            ICollection<Employee>? employees = await _employeeRepository.GetEmployees();
 
-            return employeesCurrentTasks;
-        }
+            if (employees == null || employees.Count <= 0) return false;
 
-        public async Task<bool> CreateEmployeePerformance(Employee employee, DateTime day)
-        {
-            return await DBInsert.InsertEmployeePerformance(employee, day);
-        }
+            // Парсинг всех обновлённых заявок за выбранный период, но только для неудалённых учётных записей сотрудников с окдеска
+            foreach(var employee in employees.Where(e => e.Active))
+                await UpdateIssuesFromOkdeskAPI(issues, dateFrom, dateTo, employee.Id);
 
-        public async Task<bool> UpdateEmployeePerformance(Employee employee, DateTime day)
-        {
-            return await DBUpdate.UpdateEmployeePerformance(employee, day);
-        }
+            // Поиск удалённых заявок
+            await SearchForDeletedIssues(issues, dateFrom, dateTo);
 
-        public async Task<bool> GetEmployeePerformanceFromOkdesk(DateTime dateFrom, DateTime dateTo)
-        {
-            List<Employee>? employees = await _employeeRepository.GetEmployees();
-            if (employees == null) return false;
-            var task0 = GetOpenTasks(employees.Where(e => e.Active).ToList());
+            // Получение списанного времени
+            await UpdateSpentTimeFromOkdeskAPI(issues);
 
-            foreach (DateTime day in EachDay(dateFrom, dateTo))
-            {              
-                var task1 = GetSolvedTasks(employees, day, day);
-                var task2 = GetSpentedTime(employees, day, day);
-
-                await Task.WhenAll(task1, task2);                
-
-                foreach (var employee in employees)
-                {
-                    if (employee.SolvedTasks <= 0 && employee.SpentedTimeDouble <= 0) continue;
-
-                    var tempEmployee = await GetEmployeePerformance(employee.Id, day);
-
-                    if (tempEmployee != null)
-                    {
-                        if (!await UpdateEmployeePerformance(employee, day))
-                            return false;
-                    }
-                    else
-                    {
-                        if (!await CreateEmployeePerformance(employee, day))
-                            return false;
-                    }
-                }
-            }
-            
-            await task0;
+            Helper.Immutable.UpdateTime = DateTime.Now;
             return true;
-        }
+        }        
 
-        async Task GetOpenTasks(List<Employee> employees)
+        public async Task<List<EmployeeDto>?> GetEmployeePerformanceFromLocalDB(DateTime dateFrom, DateTime dateTo)
         {
-            await Request.GetReportOpenTasks(employees);
+            ICollection<Employee>? employees = await _employeeRepository.GetEmployees();
 
+            if (employees == null) return null;
+
+            // Цикл проходит по всем сотрудникам и получает количество решённых заявок, список текущих заявок за период и количество списанного времени из локальной БД
             foreach (var employee in employees)
             {
-                if (employee?.Issues == null) continue;
-
-                foreach (var issue in employee.Issues)
-                {
-                    if (issue == null || issue.Id <= 0) continue;
-                    // Присвоение id ответственного в полученную с окдеска заявку т.к. при получении id является null
-                    issue.Assignee_id = employee.Id;
-
-                    Issue? issueFromDB = await _issueRepository.GetIssue(issue.Id);
-
-                    // Если в БД уже есть такая заявка, то добавить, иначе обновить
-                    if (issueFromDB == null || issue.Id <= 0)
-                        await _issueRepository.CreateIssue(issue);
-                    else
-                        await _issueRepository.UpdateIssue(issue);
-                }
+                employee.SolvedTasks = await _issueRepository.GetCompletedOrClosedIssues(dateFrom, dateTo, employee.Id);
+                employee.Issues = await _issueRepository.GetOpenAndCompletedOrClosedIssues(dateFrom, dateTo, employee.Id);
+                employee.SpentedTimeDouble = await _timeEntryRepository.GetTimeEntryByEmployeeId(dateFrom, dateTo, employee.Id);                
             }
 
-            // Получить все заявки из БД, кроме тех что закрыты (id статуса "closed" = 10)            
+            return ConvertEmployeeToEmployeeDto(employees);
+        }
 
-            Issue[]? dbList = await _issueRepository.GetNotClosedIssues(unknownIssues: true);
+        async Task UpdateIssuesFromOkdeskAPI(ICollection<Issue> issues, DateTime dateFrom, DateTime dateTo, int assigneeId)
+        {
+            // Получает все заявки, которые были изменены после dateFrom
+            var tempList = await _issueRepository.GetIssuesFromAPIOkdesk(dateFrom, dateTo, assigneeId);
 
-            // Здесь нужно найти задачи которые есть в БД, но нет в окдеске, чтобы найти потеряшки
-            if (dbList == null) return;
+            // Если список пустой, то завершает метод
+            if (tempList == null || tempList.Count <= 0) return;
 
-            foreach (var issue in dbList)
+            // Иначе добавляет новые заявки в общий список заявок
+            foreach (var issue in tempList)
+                issues.Add(issue);
+
+            return;
+        }
+
+        async Task UpdateSpentTimeFromOkdeskAPI(ICollection<Issue> issues)
+        {
+            if (issues == null || issues.Count < 0) return;
+
+            foreach (var issue in issues)
             {
-                if (issue == null) continue;
-                // Поиск заявки в списке открытых (полученных с сайта), если нет, то проверить следующую заявку
-                if (employees.Any(e => e?.Issues?.FirstOrDefault(i => i.Id == issue.Id)?.Id == issue.Id)) continue;
-                                
-                // Если такой заявки нет на сайте в списке открытых, то присвоить статус "неизвестно" т.к. её закрыли/удалили/объединили
-                issue.Internal_status = "unknown";
-                await _issueRepository.UpdateIssue(issue);
+                // Таймаут дабы не было спама запросов т.к. заявок может быть до нескольких сотен
+                await Task.Delay(200);
+                // Получение всех записей списания времени с окдеска по id заявки
+                var timeEntriesFromOkdesk = await _timeEntryRepository.GetTimeEntriesFromOkdesk(issue.Id);
+
+                // Получение всех записей сохранённых в локальной БД сервера
+                var timeEntriesFromLocalDB = await _timeEntryRepository.GetTimeEntriesByIssueIdFromLocalDB(issue.Id);
+
+                if (timeEntriesFromLocalDB == null || timeEntriesFromLocalDB.Count <= 0 || timeEntriesFromOkdesk == null || timeEntriesFromOkdesk?.Time_entries == null) continue;
+
+                // Прохоидит циклом по каждой записи из БД сервера для поиска удалённых в окдеске записей списанного времени
+                foreach (var entryFromLocalDB in timeEntriesFromLocalDB)
+                {
+                    // Если запись из локальной БД есть в записях полученных из API, то цикл цикл прерывается и идёт по новой
+                    if (timeEntriesFromOkdesk.Time_entries.Any(te => te.Id == entryFromLocalDB.Id)) continue;
+
+                    // Если запись отсутствует среди записей полученных с API окдеска, то значит она была удалена в окдеске и её нужно удалить и в локальной БД
+                    await _timeEntryRepository.DeleteTimeEntryFromLocalDB(entryFromLocalDB.Id);
+                }
             }
         }
 
-        async Task<List<EmployeeDto>> GetOpenTasksFromDB()
+        async Task SearchForDeletedIssues(ICollection<Issue> issuesFromOkdeskAPI, DateTime updatedSinceFrom, DateTime updatedUntilTo)
         {
-            List<Employee> employees = [];
-            Issue[]? issues = await _issueRepository.GetNotClosedIssues(unknownIssues: false);
-            List<EmployeeDto> employeesDto = [];
-            
-            if (issues == null || issues.Length == 0) return employeesDto;
-            // Проходит по всем найденным открытым заявкам в БД
-            foreach (var issue in issues)
-            {
-                if (issue.Assignee_id == null) continue;
+            ICollection<Issue>? issuesFromLocalDB = await _issueRepository.GetIssuesByUpdatedDate(updatedSinceFrom, updatedUntilTo);
 
-                // Поиск сотрудника в самозаполняющемся списке
-                var employee = employees.FirstOrDefault(e => e.Id == issue.Assignee_id);
-                // Если сотрудник не был найден, то
-                if (employee == null)
+            // Здесь нужно найти задачи которые есть в БД, но нет в окдеске, чтобы найти потеряшки
+            // дабы они в будущем не выводились при парсинге открытых заявок из БД
+            if (issuesFromLocalDB != null && issuesFromOkdeskAPI != null)
+            {
+                foreach (var issue in issuesFromLocalDB)
                 {
-                    // Создание нового сотрудника и добавление в коллекцию вместе с заявкой
-                    var newEmployee = new Employee() { Issues = [] };
-                    newEmployee.Id = (int)issue.Assignee_id;
-                    newEmployee.Issues.Add(issue);
-                    employees.Add(newEmployee);
-                }
-                else
-                {
-                    // Если найден, то добавление заявки к найденному сотруднику
-                    employee.Issues ??= [];
-                    employee.Issues.Add(issue);
+                    // Поиск заявки в списке открытых (полученных с сайта), если нет, то проверить следующую заявку
+                    if (issuesFromOkdeskAPI.Any(e => e?.Id == issue.Id)) continue;
+
+                    // Проверка, вдруг заявку передали другому инженеру и сменился assigneeId, поэтому в локальной базе она есть на данном сотруднике, а в окдеске - нет
+                    var temp = await _issueRepository.GetIssueFromOkdesk(issue.Id);  // Получение конкретной заявки из API окдеска
+                    if (temp != null && temp.Assignee != null)
+                    {
+                        // Сохранение данных полученных при обновлении заявки в окдеске
+                        issue.UpdateIssue(temp.ConvertToIssue());
+                    }
+                    else
+                    {
+                        // Если такой заявки нет на сайте в списке открытых, то установить дату удаления т.к. её удалили/объединили
+                        // Более точная дата установится во время парсинга задач с SQL API
+                        issue.Deleted_at = DateTime.Now;
+                    }
+
+                    // После в любом случае обновить заявку в локальной БД
+                    await _issueRepository.UpdateIssue(issue);
                 }
             }
+        }
 
-            // Конвертация employee в employeeDto и issue в IssueDto для вывода в API
+        static List<EmployeeDto> ConvertEmployeeToEmployeeDto(ICollection<Employee> employees)
+        {
+            // Метод необходим для конвертации в сокращённый класс для передачи его в клиентское приложение
+            List<EmployeeDto> employeesDto = [];
             foreach (var employee in employees)
             {
                 var tempEmp = new EmployeeDto() { Issues = [] };
                 var tempIssues = new List<IssueDto>();
+
                 if (employee.Issues != null)
                 {
+                    // Цикл проходит по всем заявкам сотрудника и создаёт новый экземпляр класса IssueDto и добавляет в коллекцию
                     foreach (var issue in employee.Issues)
                         tempIssues.Add(new IssueDto() { PriorityId = issue?.Priority?.Id, StatusId = issue?.Status?.Id, TypeId = issue?.Type?.Id });
-
+                                        
+                    // Присвоение данных для конвертированного в employeeDto экземпляра класса
                     tempEmp.Id = employee.Id;
                     tempEmp.Issues = tempIssues.ToArray();
+                    tempEmp.SpentedTime = employee.SpentedTimeDouble;
+                    tempEmp.SolvedTasks = employee.SolvedTasks;
                 }
+                // Добавление конвертированного сотрудника (employeeDto) в общий список Dto сотрудников
                 employeesDto.Add(tempEmp);
             }
             return employeesDto;
-        }
-
-        static async Task GetSolvedTasks(List<Employee> employees, DateTime dateFrom, DateTime dateTo)
-        {
-            await Request.GetTasks(employees, dateFrom, dateTo);
-        }
-
-        static async Task GetSpentedTime(List<Employee> employees, DateTime dateFrom, DateTime dateTo)
-        {
-            await Request.GetTime(employees, dateFrom, dateTo);
-        }
-
-        static IEnumerable<DateTime> EachDay(DateTime from, DateTime thru)
-        {
-            for (var day = from.Date; day.Date <= thru.Date; day = day.AddDays(1))
-                yield return day;
         }
     }
 }

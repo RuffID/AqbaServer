@@ -1,5 +1,6 @@
 ﻿using AqbaServer.API;
-using AqbaServer.Data;
+using AqbaServer.Data.MySql;
+using AqbaServer.Data.Postgresql;
 using AqbaServer.Helper;
 using AqbaServer.Interfaces.OkdeskPerformance;
 using AqbaServer.Models.OkdeskPerformance;
@@ -22,20 +23,58 @@ namespace AqbaServer.Repository.OkdeskPerformance
             return await DBSelect.SelectEmployeesByGroup(groupId);
         }
 
-        public async Task<List<Employee>?> GetEmployees(int employeeId)
+        public async Task<ICollection<Employee>?> GetEmployees(int employeeId)
         {
             return await DBSelect.SelectEmployees(employeeId);
         }
 
-        public async Task<List<Employee>?> GetEmployees()
+        public async Task<ICollection<Employee>?> GetEmployees()
         {
             return await DBSelect.SelectEmployees();
         }
 
-        public async Task<bool> GetEmployeesFromOkdesk()
+        public async Task<bool> UpdateEmployeesFromAPIOkdesk()
         {
             var employees = await OkdeskEntitiesRequest.GetEmployees();
-            if (employees == null || employees.Count <= 0)
+
+            return await SaveOrUpdateInDB(employees?.ToArray());
+        }
+
+        public async Task<bool> UpdateEmployee(int employeeId, Employee? employee)
+        {
+            if (employee == null) return false;
+            return await DBUpdate.UpdateEmployee(employeeId, employee);
+        }
+
+        public async Task<bool> CreateEmployee(Employee? employee)
+        {
+            if (employee == null) return false;
+            return await DBInsert.InsertEmployee(employee);
+        }
+
+        public async Task<Employee?> GetEmployee(Employee? employee)
+        {
+            if (employee == null) return null;
+            return await DBSelect.SelectEmployee(employee.Id);
+        }
+
+        public async Task<Employee?> GetEmployee(string? email)
+        {
+            if (string.IsNullOrEmpty(email)) return null;
+
+            return await DBSelect.SelectEmployee(email);
+        }
+
+        public async Task<bool> GetEmployeesFromDBOkdesk()
+        {
+            var employees = await PGSelect.SelectEmployees();
+
+            return await SaveOrUpdateInDB(employees?.ToArray());
+        }
+
+        async Task<bool> SaveOrUpdateInDB(Employee[]? employees)
+        {
+            if (employees == null || employees.Length <= 0)
             {
                 WriteLog.Warn("null при получении employees с окдеска");
                 return false;
@@ -74,35 +113,16 @@ namespace AqbaServer.Repository.OkdeskPerformance
                         else if (tempRole == null)
                         {
                             await _roleRepository.CreateRole(role);
-                            await _employeeRolesRepository.CreateEmployeeRole(employee.Id, tempRole.Id);
+                            // Чтобы узнать id роли по новой обращается к БД и после создаёт связь сотрудника и роли
+                            var newTempRole = await _roleRepository.GetRole(role);
+                            if (newTempRole != null)
+                                await _employeeRolesRepository.CreateEmployeeRole(employee.Id, newTempRole.Id);
                         }
                     }
                 }
             }
             return true;
-
         }
-
-        public async Task<bool> UpdateEmployee(int employeeId, Employee employee)
-        {
-            return await DBUpdate.UpdateEmployee(employeeId, employee);
-        }
-
-        public async Task<bool> CreateEmployee(Employee employee)
-        {
-            return await DBInsert.InsertEmployee(employee);
-        }
-
-        public async Task<Employee?> GetEmployee(Employee employee)
-        {
-            return await DBSelect.SelectEmployee(employee.Id);
-        }
-
-        public async Task<Employee?> GetEmployee(string email)
-        {
-            return await DBSelect.SelectEmployee(email);
-        }
-
     }
 }
 

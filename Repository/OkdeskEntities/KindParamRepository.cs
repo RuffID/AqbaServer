@@ -1,4 +1,4 @@
-﻿using AqbaServer.Data;
+﻿using AqbaServer.Data.MySql;
 using AqbaServer.Interfaces.OkdeskEntities;
 
 namespace AqbaServer.Repository.OkdeskEntities
@@ -7,15 +7,12 @@ namespace AqbaServer.Repository.OkdeskEntities
     {
         public async Task<bool> CreateKindParam(int kindId, int kindParameterId)
         {
-            // Если связи в БД нет, то создать
-            if (!await GetKindParam(kindId, kindParameterId))
-                return await DBInsert.InsertKindParam(kindId, kindParameterId);
-            else return true;
+            return await DBInsert.InsertKindParam(kindId, kindParameterId);
         }
 
-        public async Task<bool> GetKindParam(int kindId, int kindParamId)
+        public async Task<bool> GetKindParam(int kindId, int kindParameterId)
         {
-            return await DBSelect.SelectKindParam(kindId, kindParamId);
+            return await DBSelect.SelectKindParam(kindId, kindParameterId);
         }
     }
 }

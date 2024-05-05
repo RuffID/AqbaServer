@@ -42,8 +42,11 @@ namespace AqbaServer.Controllers.Server
             try
             {
                 _lifeTime.StopApplication();
-            
-                string? _currentProcess = Path.GetFullPath(Process.GetCurrentProcess().MainModule.FileName);
+                var process = Process.GetCurrentProcess().MainModule;
+                string? _currentProcess;
+                if (process != null)
+                    _currentProcess = Path.GetFullPath(process.FileName);
+                else return 1;
 
                 if (!string.IsNullOrEmpty(_currentProcess))
                     Process.Start(_currentProcess);

@@ -7,8 +7,12 @@ namespace AqbaServer.Interfaces.OkdeskPerformance
         Task<bool> UpdateIssue(Issue issue);
         Task<bool> CreateIssue(Issue issue);
         Task<Issue?> GetIssue(int issueId);
-        //Task<List<int>?> GetIssues(int statusIdNot);
-        Task<Issue[]?> GetNotClosedIssues(bool unknownIssues = false);
-        Task<bool> UpdateIssueDictionary();
+        Task<IssueJSON?> GetIssueFromOkdesk(int issueId);
+        Task<ICollection<Issue>?> GetIssuesFromAPIOkdesk(DateTime updatedSinceFrom, DateTime updatedUntilTo, int assignee_id);
+        Task<bool> UpdateIssueDictionaryFromDB();
+        Task<bool> UpdateIssuesFromDBOkdesk(DateTime dateFrom, DateTime dateTo);
+        Task<int> GetCompletedOrClosedIssues(DateTime closedOrCompletedFrom, DateTime closedOrCompletedTo, int employeeId);
+        Task<ICollection<Issue>?> GetOpenAndCompletedOrClosedIssues(DateTime dateFrom, DateTime dateTo, int employeeId);
+        Task<ICollection<Issue>?> GetIssuesByUpdatedDate(DateTime updatedFrom, DateTime updatedTo);
     }
 }

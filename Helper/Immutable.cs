@@ -14,5 +14,6 @@
         public const string PATH_TO_VERSION_JSON = $"{PATH_TO_VERSION_DIR}\\version.json";
         public static DateTime ServerStartingTime { get; set; } = DateTime.Now;
         public static int Errors { get; set; }
+        public static DateTime UpdateTime { get; set; }
     }
 }

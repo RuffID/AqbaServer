@@ -39,13 +39,24 @@ namespace AqbaServer.Controllers.OkdeskEntities
         [ProducesResponseType(200)]
         public async Task<IActionResult> GetEmployeesFromOkdesk()
         {
-            if (!await _employeeRepository.GetEmployeesFromOkdesk())
+            if (!await _employeeRepository.UpdateEmployeesFromAPIOkdesk())
             {
                 ModelState.AddModelError("", "Something went wrong when retrieving employees from okdesk");
                 return StatusCode(500, ModelState);
             }
 
             return Ok();
+        }
+
+        [HttpGet("okdeskDB")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(500)]
+        public async Task<IActionResult> GetEmployeesDBOkdesk()
+        {
+            if (await _employeeRepository.GetEmployeesFromDBOkdesk() == false)
+                return StatusCode(500, "Внутренняя ошибка при получении пользователей из БД окдеска");
+
+            return Ok("Пользователи успешно обновлены");
         }
     }
 }

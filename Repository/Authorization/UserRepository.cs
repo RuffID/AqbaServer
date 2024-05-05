@@ -1,5 +1,5 @@
 ﻿using AqbaServer.Authorization;
-using AqbaServer.Data;
+using AqbaServer.Data.MySql;
 using AqbaServer.Helper;
 using AqbaServer.Interfaces.Authorization;
 using AqbaServer.Models.Authorization;
@@ -18,7 +18,7 @@ namespace AqbaServer.Repository.Authorization
             return await DBSelect.SelectUser(userEmail);
         }
 
-        public async Task<List<User>?> GetUsers()
+        public async Task<ICollection<User>?> GetUsers()
         {
             return await DBSelect.SelectUsers();
         }

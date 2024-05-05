@@ -13,10 +13,9 @@ namespace AqbaServer.Models.OkdeskPerformance
         [JsonProperty("address")]
         public string? Address { get; set; }
 
-        [JsonProperty("coordinates")]
-        public List<decimal>? Coordinates { get; set; }
-
         [JsonProperty("company_id")]
         public int? Company_Id { get; set; }
+        [JsonProperty("active")]
+        public bool? Active { get; set; }
     }
 }

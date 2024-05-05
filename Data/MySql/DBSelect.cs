@@ -1,4 +1,3 @@
-using AqbaServer.Dto;
 using AqbaServer.Helper;
 using AqbaServer.Models.Authorization;
 using AqbaServer.Models.OkdeskPerformance;
@@ -6,7 +5,7 @@ using AqbaServer.Models.OkdeskReport;
 using MySql.Data.MySqlClient;
 using System.Data.Common;
 
-namespace AqbaServer.Data
+namespace AqbaServer.Data.MySql
 {
     public class DBSelect
     {
@@ -15,6 +14,7 @@ namespace AqbaServer.Data
         public static async Task<ICollection<Company>?> SelectCompanies(int companyId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -23,12 +23,8 @@ namespace AqbaServer.Data
 
                 string sqlCommand = $"SELECT * FROM company WHERE id >= {companyId} LIMIT {limit}";
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;                
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -56,15 +52,17 @@ namespace AqbaServer.Data
                 return null;
             }
             finally
-            {
+            {                
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<ICollection<Company>?> SelectCompaniesByCategory(int categoryId, int companyId)
+        public static async Task<ICollection<Company>?> SelectCompaniesByCategory(string categoryCode, int companyId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -74,14 +72,10 @@ namespace AqbaServer.Data
                     "SELECT company.id, company.name, company.additional_name, company.active, company.categoryId, company_category.color " +
                     "FROM company " +
                     "JOIN company_category ON company.categoryId = company_category.id " +
-                    "WHERE categoryId = {0} AND company.id >= {1} LIMIT {2}", categoryId, companyId, limit);
+                    "WHERE company_category.code = '{0}' AND company.id >= {1} LIMIT {2}", categoryCode, companyId, limit);
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -89,6 +83,7 @@ namespace AqbaServer.Data
                     while (await reader.ReadAsync())
                     {
                         company = new();
+                        company.Category = new();
 
                         company.Id = Convert.ToInt32(reader["id"]);
                         if (!reader.IsDBNull(reader.GetOrdinal("name")))
@@ -114,6 +109,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -122,6 +118,7 @@ namespace AqbaServer.Data
         public static async Task<Company?> SelectCompany(int companyId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -132,12 +129,8 @@ namespace AqbaServer.Data
                     "JOIN company_category ON company.categoryId = company_category.id " +
                     "WHERE company.id = {0}", companyId);
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -169,6 +162,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -177,16 +171,14 @@ namespace AqbaServer.Data
         public static async Task<int?> SelectLastCompany()
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
                 string sqlCommand = "SELECT id FROM company ORDER BY id DESC LIMIT 1";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
 
@@ -206,26 +198,25 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<ICollection<MaintenanceEntity>> SelectMaintenanceEntities(int maintenanceEntityId)
+        public static async Task<ICollection<MaintenanceEntity>?> SelectMaintenanceEntities(int maintenanceEntityId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
-                ICollection<MaintenanceEntity> maintenanceEntities = new List<MaintenanceEntity>();
+                ICollection<MaintenanceEntity> maintenanceEntities = [];
                 MaintenanceEntity maintenanceEntity;
                 string sqlCommand = $"SELECT * FROM maintenance_entity WHERE id >= {maintenanceEntityId} LIMIT {limit}";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -239,6 +230,8 @@ namespace AqbaServer.Data
                             maintenanceEntity.Name = reader["name"].ToString();
                         if (!reader.IsDBNull(reader.GetOrdinal("address")))
                             maintenanceEntity.Address = reader["address"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("active")))
+                            maintenanceEntity.Active = Convert.ToBoolean(reader["active"]);
                         if (!reader.IsDBNull(reader.GetOrdinal("companyId")))
                             maintenanceEntity.Company_Id = Convert.ToInt32(reader["companyId"]);
 
@@ -254,25 +247,73 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<MaintenanceEntity> SelectMaintenanceEntity(int maintenanceEntityId)
+        public static async Task<ICollection<MaintenanceEntity>?> SelectMaintenanceEntitiesByCompany(int companyId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
+            try
+            {
+                await connection.OpenAsync();
+                ICollection<MaintenanceEntity> maintenanceEntities = [];
+                MaintenanceEntity maintenanceEntity;
+                string sqlCommand = $"SELECT * FROM `maintenance_entity` WHERE companyId = '{companyId}'";
+
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
+
+                using DbDataReader reader = await cmd.ExecuteReaderAsync();
+                if (reader.HasRows)
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        maintenanceEntity = new();
+                        maintenanceEntity.Id = Convert.ToInt32(reader["id"]);
+
+                        if (!reader.IsDBNull(reader.GetOrdinal("name")))
+                            maintenanceEntity.Name = reader["name"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("address")))
+                            maintenanceEntity.Address = reader["address"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("active")))
+                            maintenanceEntity.Active = Convert.ToBoolean(reader["active"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("companyId")))
+                            maintenanceEntity.Company_Id = Convert.ToInt32(reader["companyId"]);
+
+                        maintenanceEntities?.Add(maintenanceEntity);
+                    }
+                }
+                return maintenanceEntities;
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return null;
+            }
+            finally
+            {
+                await cmd.DisposeAsync();
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<MaintenanceEntity?> SelectMaintenanceEntity(int maintenanceEntityId)
+        {
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
                 MaintenanceEntity maintenanceEntity;
                 string sqlCommand = $"SELECT * FROM maintenance_entity WHERE id = {maintenanceEntityId}";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -285,6 +326,8 @@ namespace AqbaServer.Data
                         maintenanceEntity.Name = reader["name"].ToString();
                     if (!reader.IsDBNull(reader.GetOrdinal("address")))
                         maintenanceEntity.Address = reader["address"].ToString();
+                    if (!reader.IsDBNull(reader.GetOrdinal("active")))
+                        maintenanceEntity.Active = Convert.ToBoolean(reader["active"]);
                     if (!reader.IsDBNull(reader.GetOrdinal("companyId")))
                         maintenanceEntity.Company_Id = Convert.ToInt32(reader["companyId"]);
 
@@ -299,6 +342,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -307,16 +351,14 @@ namespace AqbaServer.Data
         public static async Task<int?> SelectLastMaintenanceEntity()
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
                 string sqlCommand = "SELECT id FROM maintenance_entity ORDER BY id DESC LIMIT 1";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
 
@@ -336,6 +378,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -344,6 +387,7 @@ namespace AqbaServer.Data
         public static async Task<ICollection<Equipment>?> SelectEquipments()
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -351,12 +395,8 @@ namespace AqbaServer.Data
                 Equipment equipment;
                 string sqlCommand = $"SELECT * FROM equipment";
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -383,14 +423,16 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<ICollection<Equipment>> SelectEquipments(int equipmentId)
+        public static async Task<ICollection<Equipment>?> SelectEquipments(int equipmentId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -398,12 +440,8 @@ namespace AqbaServer.Data
                 Equipment equipment;
                 string sqlCommand = $"SELECT * FROM equipment WHERE id >= {equipmentId} LIMIT {limit}";
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -430,6 +468,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -438,6 +477,7 @@ namespace AqbaServer.Data
         public static async Task<Equipment?> SelectEquipment(int equipmentId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -453,12 +493,8 @@ namespace AqbaServer.Data
                     "LEFT OUTER JOIN model ON equipment.modelId = model.Id " +
                     "WHERE equipment.id = {0}", equipmentId);
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
 
@@ -523,7 +559,9 @@ namespace AqbaServer.Data
                     if (!reader.IsDBNull(reader.GetOrdinal("modelDescription")))
                         equipment.Equipment_model.Description = reader["modelDescription"].ToString();
 
-                    equipment.Parameters = await SelectEquipmentParameters(equipment.Id);
+                    var parameters = await SelectEquipmentParameters(equipment.Id);
+                    if (parameters != null)
+                        equipment.Parameters = (List<EquipmentParameter>)parameters;
                     equipment.Equipment_kind.Parameters = await SelectKindParameters(equipment.Equipment_kind.Id);
 
 
@@ -538,6 +576,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -546,16 +585,14 @@ namespace AqbaServer.Data
         public static async Task<int?> SelectLastEquipment()
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
                 string sqlCommand = "SELECT id FROM equipment ORDER BY id DESC LIMIT 1";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
 
@@ -575,6 +612,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -583,6 +621,7 @@ namespace AqbaServer.Data
         public static async Task<ICollection<Equipment>?> SelectEquipmentsByMaintenanceEntity(int maintenanceEntityId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -601,12 +640,8 @@ namespace AqbaServer.Data
                     "WHERE maintenanceEntitiesId = {0}", maintenanceEntityId);
 
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -677,7 +712,8 @@ namespace AqbaServer.Data
 
                 foreach (var equip in equipments)
                 {
-                    equip.Parameters = await SelectEquipmentParameters(equip.Id);
+                    equip.Parameters = (List<EquipmentParameter>?)await SelectEquipmentParameters(equip.Id);
+                    equip.Equipment_kind ??= new();
                     equip.Equipment_kind.Parameters = await SelectKindParameters(equip.Equipment_kind.Id);
                 }
 
@@ -690,6 +726,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -698,6 +735,7 @@ namespace AqbaServer.Data
         public static async Task<ICollection<Equipment>?> SelectEquipmentsByCompany(int companyId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -716,12 +754,8 @@ namespace AqbaServer.Data
                     "WHERE companyId = {0}", companyId);
 
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -786,16 +820,14 @@ namespace AqbaServer.Data
                         if (!reader.IsDBNull(reader.GetOrdinal("modelDescription")))
                             equipment.Equipment_model.Description = reader["modelDescription"].ToString();
 
-                        /*equipment.Model.EquipmentKind = equipment.Kind;
-                        equipment.Model.EquipmentManufacturer = equipment.Manufacturer;*/
-
                         equipments.Add(equipment);
                     }
                 }
 
                 foreach (var equip in equipments)
                 {
-                    equip.Parameters = await SelectEquipmentParameters(equip.Id);
+                    equip.Parameters = (List<EquipmentParameter>?)await SelectEquipmentParameters(equip.Id);
+                    equip.Equipment_kind ??= new();
                     equip.Equipment_kind.Parameters = await SelectKindParameters(equip.Equipment_kind.Id);
                 }
 
@@ -808,27 +840,25 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<ICollection<Kind>> SelectKinds()
+        public static async Task<ICollection<Kind>?> SelectKinds()
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
-                ICollection<Kind> kinds = new List<Kind>();
+                ICollection<Kind> kinds = [];
                 Kind kind;
                 string sqlCommand = "SELECT * FROM kind";
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -863,26 +893,26 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<Kind> SelectKind(string kindCode)
+        public static async Task<Kind?> SelectKind(string? kindCode)
         {
+            if (string.IsNullOrEmpty(kindCode)) return null;
+
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
                 Kind kind;
                 string sqlCommand = $"SELECT * FROM kind WHERE code = '{kindCode}'";
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -912,27 +942,25 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<ICollection<KindParameter>> SelectKindParameters()
+        public static async Task<ICollection<KindParameter>?> SelectKindParameters()
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
-                ICollection<KindParameter> kindParameters = new List<KindParameter>();
+                ICollection<KindParameter> kindParameters = [];
                 KindParameter parameter;
                 string sqlCommand = "SELECT * FROM kinds_parameters";
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
 
@@ -960,18 +988,20 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<ICollection<KindParameter>> SelectKindParameters(int kindId)
+        public static async Task<ICollection<KindParameter>?> SelectKindParameters(int kindId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
-                ICollection<KindParameter> kindParameters = new List<KindParameter>();
+                ICollection<KindParameter> kindParameters = [];
                 KindParameter parameter;
                 string sqlCommand = string.Format(
                     "SELECT kinds_parameters.id, kinds_parameters.code, kinds_parameters.name, kinds_parameters.fieldType " +
@@ -980,12 +1010,8 @@ namespace AqbaServer.Data
                     "JOIN kinds_parameters ON kind_param.kindParamId = kinds_parameters.id " +
                     "WHERE kind.id = {0}", kindId);
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
 
@@ -1015,26 +1041,24 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<KindParameter> SelectKindParameter(string kindParameterCode)
+        public static async Task<KindParameter?> SelectKindParameter(string kindParameterCode)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
                 KindParameter parameter;
                 string sqlCommand = $"SELECT * FROM kinds_parameters WHERE code = '{kindParameterCode}'";
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
 
@@ -1047,7 +1071,7 @@ namespace AqbaServer.Data
                     if (!reader.IsDBNull(reader.GetOrdinal("name")))
                         parameter.Name = reader["name"].ToString();
                     if (!reader.IsDBNull(reader.GetOrdinal("code")))
-                        parameter.Name = reader["code"].ToString();
+                        parameter.Code = reader["code"].ToString();
                     if (!reader.IsDBNull(reader.GetOrdinal("fieldType")))
                         parameter.FieldType = reader["fieldType"].ToString();
 
@@ -1062,14 +1086,16 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<ICollection<Manufacturer>> SelectManufacturers()
+        public static async Task<ICollection<Manufacturer>?> SelectManufacturers()
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -1077,12 +1103,8 @@ namespace AqbaServer.Data
                 Manufacturer manufacturer;
                 string sqlCommand = "SELECT * FROM manufacturer";
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = cmd.ExecuteReader();
                 if (reader.HasRows)
@@ -1114,26 +1136,26 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<Manufacturer> SelectManufacturer(string manufacturerCode)
+        public static async Task<Manufacturer?> SelectManufacturer(string? manufacturerCode)
         {
+            if (string.IsNullOrEmpty(manufacturerCode)) return null;
+
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
                 Manufacturer manufacturer;
                 string sqlCommand = $"SELECT * FROM manufacturer WHERE code = '{manufacturerCode}'";
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = cmd.ExecuteReader();
                 if (reader.HasRows)
@@ -1162,27 +1184,25 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<ICollection<Model>> SelectModels()
+        public static async Task<ICollection<Model>?> SelectModels()
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
-                ICollection<Model> models = new List<Model>();
+                ICollection<Model> models = [];
                 Model model;
                 string sqlCommand = "SELECT * FROM model";
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -1212,25 +1232,26 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<Model> SelectModel(string modelCode)
+        public static async Task<Model?> SelectModel(string? modelCode)
         {
+            if (string.IsNullOrEmpty(modelCode)) return null;
+
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
                 Model model;
                 string sqlCommand = $"SELECT * FROM model WHERE code = '{modelCode}'";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -1258,42 +1279,43 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<ICollection<Category>> SelectCategories()
+        public static async Task<ICollection<Category>?> SelectCategories()
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
-                ICollection<Category> categories = new List<Category>();
+                ICollection<Category> categories = [];
                 Category category;
                 string sqlCommand = "SELECT * FROM company_category";
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = cmd.ExecuteReader();
                 if (reader.HasRows)
                 {
                     while (await reader.ReadAsync())
                     {
-                        category = new()
-                        {
-                            Id = Convert.ToInt32(reader["id"].ToString()),
-                            Color = reader["color"].ToString()
-                        };
+                        category = new();
+                        category.Id = Convert.ToInt32(reader["id"].ToString());
+                        if (!reader.IsDBNull(reader.GetOrdinal("color")))
+                            category.Color = reader["color"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("name")))
+                            category.Name = reader["name"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("code")))
+                            category.Code = reader["code"].ToString();
+
                         categories.Add(category);
                     }
                 }
-
                 return categories;
             }
             catch (Exception e)
@@ -1303,36 +1325,38 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<Category> SelectCategory(int categoryId)
+        public static async Task<Category?> SelectCategory(string categoryCode)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
                 Category category;
-                string sqlCommand = $"SELECT * FROM company_category WHERE id = {categoryId}";
+                string sqlCommand = $"SELECT * FROM company_category WHERE code = '{categoryCode}'";
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = cmd.ExecuteReader();
                 if (reader.HasRows)
                 {
                     await reader.ReadAsync();
-                    category = new()
-                    {
-                        Id = Convert.ToInt32(reader["id"].ToString()),
-                        Color = reader["color"].ToString()
-                    };
+                    category = new();
+                    category.Id = Convert.ToInt32(reader["id"].ToString());
+                    if (!reader.IsDBNull(reader.GetOrdinal("color")))
+                        category.Color = reader["color"].ToString();
+                    if (!reader.IsDBNull(reader.GetOrdinal("name")))
+                        category.Name = reader["name"].ToString();
+                    if (!reader.IsDBNull(reader.GetOrdinal("code")))
+                        category.Code = reader["code"].ToString();
+                    
                     return category;
                 }
                 return null;
@@ -1344,14 +1368,59 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<ICollection<EquipmentParameter>> SelectEquipmentParameters()
+        public static async Task<Category?> SelectCategory(int categoryId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
+            try
+            {
+                await connection.OpenAsync();
+                Category category;
+                string sqlCommand = $"SELECT * FROM company_category WHERE id = '{categoryId}'";
+
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
+
+                using DbDataReader reader = cmd.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    await reader.ReadAsync();
+                    category = new();
+                    category.Id = Convert.ToInt32(reader["id"].ToString());
+                    if (!reader.IsDBNull(reader.GetOrdinal("color")))
+                        category.Color = reader["color"].ToString();
+                    if (!reader.IsDBNull(reader.GetOrdinal("name")))
+                        category.Name = reader["name"].ToString();
+                    if (!reader.IsDBNull(reader.GetOrdinal("code")))
+                        category.Code = reader["code"].ToString();
+
+                    return category;
+                }
+                return null;
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return null;
+            }
+            finally
+            {
+                await cmd.DisposeAsync();
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<ICollection<EquipmentParameter>?> SelectEquipmentParameters()
+        {
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -1359,12 +1428,8 @@ namespace AqbaServer.Data
                 EquipmentParameter parameter;
                 string sqlCommand = $"SELECT * FROM parameter";
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -1390,25 +1455,24 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<EquipmentParameter> SelectEquipmentParameter(int equipmentId, int kindParamId)
+        public static async Task<EquipmentParameter?> SelectEquipmentParameter(int equipmentId, int kindParamId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
                 EquipmentParameter parameter;
                 string sqlCommand = $"SELECT * FROM parameter WHERE equipmentId = {equipmentId} AND kindParameterId = {kindParamId}";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -1430,34 +1494,31 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<List<EquipmentParameter>> SelectEquipmentParameters(int equipmentId)
+        public static async Task<ICollection<EquipmentParameter>?> SelectEquipmentParameters(int equipmentId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
-                List<EquipmentParameter> equipmentParameters = new();
+                ICollection<EquipmentParameter> equipmentParameters = [];
                 EquipmentParameter parameter;
-                /*string sqlCommand = $"SELECT * FROM parameter WHERE equipmentId = {equipmentId}";*/
 
-                string sqlCommand = string.Format
-                    ("SELECT parameter.id, parameter.value, " +
+                string sqlCommand = string.Format(
+                    "SELECT parameter.id, parameter.value, " +
                     "kinds_parameters.name, kinds_parameters.code, kinds_parameters.fieldType " +
                     "FROM parameter " +
                     "JOIN kinds_parameters ON parameter.kindParameterId = kinds_parameters.id " +
                     "WHERE equipmentId = {0}", equipmentId);
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -1487,6 +1548,7 @@ namespace AqbaServer.Data
             }
             catch (Exception e)
             {
+                await cmd.DisposeAsync();
                 WriteLog.Error(e.ToString());
                 return null;
             }
@@ -1497,19 +1559,17 @@ namespace AqbaServer.Data
             }
         }
 
-        public static async Task<bool> SelectKindParam(int kindId, int kindParamId)
+        public static async Task<bool> SelectKindParam(int kindId, int kindParameterId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
-                string sqlCommand = $"SELECT * FROM kind_param WHERE kindId = {kindId} AND kindParamId = {kindParamId}";
+                string sqlCommand = $"SELECT * FROM kind_param WHERE kindId = {kindId} AND kindParamId = {kindParameterId}";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
 
@@ -1525,6 +1585,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -1533,18 +1594,15 @@ namespace AqbaServer.Data
         public static async Task<Employee?> SelectEmployee(int employeeId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
                 Employee employee;
                 string sqlCommand = $"SELECT * FROM employee WHERE id = {employeeId}";
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -1581,6 +1639,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -1589,18 +1648,15 @@ namespace AqbaServer.Data
         public static async Task<Employee?> SelectEmployee(string employeeEmail)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
                 Employee employee;
                 string sqlCommand = $"SELECT * FROM employee WHERE email = '{employeeEmail}'";
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -1637,6 +1693,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -1645,19 +1702,17 @@ namespace AqbaServer.Data
         public static async Task<List<Employee>?> SelectEmployees(int employeeId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
                 List<Employee> employees = new();
                 Employee employee;
 
-                string sqlCommand = $"SELECT * FROM employee WHERE id >= {employeeId} LIMIT {limit}";               
+                string sqlCommand = $"SELECT * FROM employee WHERE id >= {employeeId} LIMIT {limit}";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -1700,6 +1755,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -1708,6 +1764,7 @@ namespace AqbaServer.Data
         public static async Task<int[]?> SelectEmployeesByGroup(int groupId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -1719,11 +1776,8 @@ namespace AqbaServer.Data
                     "JOIN `group` ON employee_groups.groupId = `group`.id " +
                     "WHERE `group`.id = {0}", groupId);
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -1743,28 +1797,26 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<List<Employee>?> SelectEmployees()
+        public static async Task<ICollection<Employee>?> SelectEmployees()
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
-                List<Employee> employees = new();
+                ICollection<Employee> employees = [];
                 Employee employee;
 
                 string sqlCommand = $"SELECT * FROM employee";
 
-                // Создать объект Command.
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -1803,24 +1855,23 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }        
 
-        public static async Task<bool> SelectEmployeeGroup(int employeeId, int groupId)
+        public static async Task<bool> SelectEmployeeGroup(int id)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
-                string sqlCommand = $"SELECT * FROM employee_groups WHERE employeeId = {employeeId} AND groupId = {groupId}";
+                string sqlCommand = $"SELECT * FROM `employee_groups` WHERE id = '{id}';";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
 
@@ -1836,6 +1887,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -1844,16 +1896,14 @@ namespace AqbaServer.Data
         public static async Task<bool> SelectEmployeeRole(int employeeId, int roleId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
                 string sqlCommand = $"SELECT * FROM employee_roles WHERE employeeId = {employeeId} AND roleId = {roleId}";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
 
@@ -1869,6 +1919,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -1877,17 +1928,15 @@ namespace AqbaServer.Data
         public static async Task<Role?> SelectRole(string? roleName)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
                 Role? role;
                 string sqlCommand = $"SELECT * FROM role WHERE name = '{roleName}'";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -1910,18 +1959,20 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<List<Role>?> SelectRoles(int employeeId)
+        public static async Task<ICollection<Role>?> SelectRoles(int employeeId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
-                List<Role> roles = [];
+                ICollection<Role> roles = [];
                 Role? role;
                 string sqlCommand = string.Format(
                     "SELECT employee_roles.roleId, role.name " +
@@ -1930,11 +1981,8 @@ namespace AqbaServer.Data
                     "JOIN role ON employee_roles.roleId = role.id " +
                     "WHERE employee.id = {0}", employeeId);
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -1961,6 +2009,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -1969,17 +2018,15 @@ namespace AqbaServer.Data
         public static async Task<Group?> SelectGroup(int groupId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
                 Group? group;
                 string sqlCommand = $"SELECT * FROM `group` WHERE id = {groupId}";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -2006,18 +2053,20 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<List<Group>?> SelectGroups(int employeeId)
+        public static async Task<ICollection<Group>?> SelectGroups(int employeeId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
-                List<Group> groups = [];
+                ICollection<Group> groups = [];
                 Group? group;
                 string sqlCommand = string.Format(
                     "SELECT employee_groups.groupId, `group`.name, `group`.active, `group`.description " +
@@ -2026,11 +2075,8 @@ namespace AqbaServer.Data
                     "JOIN `group` ON employee_groups.groupId = `group`.id " +
                     "WHERE employee.id = {0}", employeeId);
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -2060,26 +2106,25 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<List<Group>?> SelectGroups()
+        public static async Task<ICollection<Group>?> SelectGroups()
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
-                List<Group> groups = [];
+                ICollection<Group> groups = [];
                 Group? group;
                 string sqlCommand = "SELECT * FROM `group`";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -2111,99 +2156,7 @@ namespace AqbaServer.Data
             }
             finally
             {
-                await connection.CloseAsync();
-                await connection.DisposeAsync();
-            }
-        }
-
-        public static async Task<EmployeeDto?> SelectEmployeePerformance(int employeeId, DateTime date)
-        {
-            MySqlConnection connection = DBConfig.GetDBConnection();
-            try
-            {
-                await connection.OpenAsync();
-                EmployeeDto employee = new();
-                string sqlCommand = 
-                    $"SELECT employeeId, solvedTasks, spentedTime FROM `employee_performance` WHERE employeeId = {employeeId} AND `date` = '{date:yyyy-MM-dd}'";
-
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
-
-                using DbDataReader reader = await cmd.ExecuteReaderAsync();
-
-                if (reader.HasRows)
-                {
-                    await reader.ReadAsync();
-                    employee.Id = Convert.ToInt32(reader["employeeId"]);
-                    if (!reader.IsDBNull(reader.GetOrdinal("solvedTasks")))
-                        employee.SolvedTasks = Convert.ToInt32(reader["solvedTasks"]);
-                    if (!reader.IsDBNull(reader.GetOrdinal("spentedTime")))
-                        employee.SpentedTime = Convert.ToDouble(reader["spentedTime"]);
-
-                    return employee;
-                }
-                return null;
-            }
-            catch (Exception e)
-            {
-                WriteLog.Error(e.ToString());
-                return null;
-            }
-            finally
-            {
-                await connection.CloseAsync();
-                await connection.DisposeAsync();
-            }
-        }
-
-        public static async Task<List<EmployeeDto>?> SelectEmployeesPerformance(DateTime dateFrom, DateTime dateTo)
-        {
-            MySqlConnection connection = DBConfig.GetDBConnection();
-            try
-            {
-                await connection.OpenAsync();
-                List<EmployeeDto> employees = [];
-                EmployeeDto employee;
-                string sqlCommand = string.Format(
-                    "SELECT employeeId, SUM(solvedTasks) AS solvedTasks, SUM(spentedTime) AS spentedTime " +
-                    "FROM `employee_performance` " +
-                    "WHERE `date` between '{0}' and '{1}' GROUP BY employeeId ", dateFrom.ToString("yyyy-MM-dd"), dateTo.ToString("yyyy-MM-dd"));
-
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
-
-                using DbDataReader reader = await cmd.ExecuteReaderAsync();
-
-                if (reader.HasRows)
-                {
-                    while (await reader.ReadAsync())
-                    {
-                        employee = new();
-                        employee.Id = Convert.ToInt32(reader["employeeId"]);
-                        if (!reader.IsDBNull(reader.GetOrdinal("solvedTasks")))
-                            employee.SolvedTasks = Convert.ToInt32(reader["solvedTasks"]);
-                        if (!reader.IsDBNull(reader.GetOrdinal("spentedTime")))
-                            employee.SpentedTime = Convert.ToDouble(reader["spentedTime"]);
-
-                        employees.Add(employee);
-                    }
-                    return employees;
-                }
-                return null;
-            }
-            catch (Exception e)
-            {
-                WriteLog.Error(e.ToString());
-                return null;
-            }
-            finally
-            {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -2212,6 +2165,7 @@ namespace AqbaServer.Data
         public static async Task<User?> SelectUser(string userEmail)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -2222,11 +2176,8 @@ namespace AqbaServer.Data
                     "JOIN user_role ON user.roleId = user_role.id " +
                     "WHERE user.email = '{0}'", userEmail);
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -2256,29 +2207,28 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<List<User>?> SelectUsers()
+        public static async Task<ICollection<User>?> SelectUsers()
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
-                List<User> users = [];
+                ICollection<User> users = [];
                 User user;
                 string sqlCommand = string.Format(
                     "SELECT user.id, user.email, user.passwordHash, user_role.Name AS roleName, user.active " +
                     "FROM user " +
                     "JOIN user_role ON user.roleId = user_role.id");
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
 
@@ -2310,6 +2260,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -2318,6 +2269,7 @@ namespace AqbaServer.Data
         public static async Task<int?> SelectUserRole(string roleName)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -2326,11 +2278,8 @@ namespace AqbaServer.Data
                     "FROM user_role " +
                     "WHERE user_role.Name = '{0}'", roleName);
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
 
@@ -2350,6 +2299,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -2358,6 +2308,7 @@ namespace AqbaServer.Data
         public static async Task<string?> SelectUserRoles(string apiKey)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -2367,11 +2318,8 @@ namespace AqbaServer.Data
                     "JOIN user_role ON user.roleId = user_role.id " +
                     "WHERE user.apiKey = '{0}'", apiKey);
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -2389,6 +2337,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -2397,6 +2346,7 @@ namespace AqbaServer.Data
         public static async Task<User?> SelectUserByRefreshToken(string refreshToken)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -2407,11 +2357,8 @@ namespace AqbaServer.Data
                     "JOIN user_role ON user.roleId = user_role.id " +
                     "WHERE user.refreshToken = '{0}'", refreshToken);
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
 
@@ -2443,86 +2390,28 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        /*public static async Task<List<int>?> SelectIssues(int statusIdNot)
+        public static async Task<ICollection<Issue>?> SelectIssues(DateTime employeesUpdatedFrom, DateTime employeesUpdatedTo)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
-                List<int>? issues = [];
-                string sqlCommand = string.Format( "SELECT id FROM issue WHERE statusId != {0}", statusIdNot);
-
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
-
-                using DbDataReader reader = await cmd.ExecuteReaderAsync();
-
-                if (reader.HasRows)
-                {
-                    while (await reader.ReadAsync())
-                    {
-                        issues.Add( Convert.ToInt32(reader["id"]) );
-                    }
-                    return issues;
-                }
-                return null;
-
-            }
-            catch (Exception e)
-            {
-                WriteLog.Error(e.ToString());
-                return null;
-            }
-            finally
-            {
-                await connection.CloseAsync();
-                await connection.DisposeAsync();
-            }
-        }*/
-
-        public static async Task<List<Issue>?> SelectIssues(Status status, bool unknownIssues = false)
-        {
-            MySqlConnection connection = DBConfig.GetDBConnection();
-            try
-            {
-                await connection.OpenAsync();
-                List<Issue> issues = [];
+                ICollection<Issue> issues = [];
                 Issue issue;
-                /*string sqlCommand = 
-                    "SELECT issue.id, issue.assignee_id, issue.author_id, issue.title, issue.internal_status, issue.created_at, issue.completed_at, " +
-                    "issue.deadline_at, issue.delay_to, issue.deleted_at, issue.companyId, issue.service_objectId, " +
-                    "issue_priority.id AS priorityId, issue_priority.name AS priorityName, " +
-                    "issue_priority.code AS priorityCode, issue_priority.position AS priorityPosition, issue_priority.color AS priorityColor, " +
-                    "issue_type.id AS typeId, issue_type.name AS typeName, issue_type.code AS typeCode, issue_type.default AS typeDefault, " +
-                    "issue_type.inner AS typeInner, issue_type.type AS typeType, issue_type.available_for_client AS typeAvailable, " +
-                    "issue_status.id AS statusId, issue_status.code AS statusCode, issue_status.name AS statusName, issue_status.color AS statusColor " +
-                    "FROM issue " +
-                    "JOIN issue_priority ON issue.priorityId = issue_priority.id " +
-                    "JOIN issue_type ON issue.typeId = issue_type.id " +
-                    "JOIN issue_status ON issue.statusId = issue_status.id " +
-                    "WHERE issue_status.Code != 'closed'";*/
 
-                string sqlCommand = $"SELECT * FROM issue WHERE statusId != {status.Id} ";
+                string sqlCommand = string.Format(
+                    "SELECT * FROM issue WHERE (employees_updated_at BETWEEN '{0}' AND '{1}');", 
+                    employeesUpdatedFrom.ToString("yyyy-MM-dd HH:mm:ss"), employeesUpdatedTo.ToString("yyyy-MM-dd HH:mm:ss"));
 
-                /*if (unknownIssues) sqlCommand += " AND (issue.internal_status = 'unknown' OR issue.internal_status IS NULL)";
-                else sqlCommand += " AND issue.internal_status IS NULL";*/
-
-                if (unknownIssues) sqlCommand += " AND (internal_status = 'unknown' OR internal_status IS NULL)";
-                else sqlCommand += " AND internal_status IS NULL";
-
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
 
@@ -2547,8 +2436,8 @@ namespace AqbaServer.Data
                             issue.Author_id = Convert.ToInt32(reader["author_id"].ToString());
                         if (!reader.IsDBNull(reader.GetOrdinal("title")))
                             issue.Title = reader["title"].ToString();
-                        if (!reader.IsDBNull(reader.GetOrdinal("internal_status")))
-                            issue.Internal_status = reader["internal_status"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("employees_updated_at")))
+                            issue.Employees_updated_at = Convert.ToDateTime(reader["employees_updated_at"]);
                         if (!reader.IsDBNull(reader.GetOrdinal("created_at")))
                             issue.Created_at = Convert.ToDateTime(reader["created_at"]);
                         if (!reader.IsDBNull(reader.GetOrdinal("completed_at")))
@@ -2560,21 +2449,20 @@ namespace AqbaServer.Data
                         if (!reader.IsDBNull(reader.GetOrdinal("deleted_at")))
                             issue.Deleted_at = Convert.ToDateTime(reader["deleted_at"]);
                         if (!reader.IsDBNull(reader.GetOrdinal("statusId")))
-                            issue.Status.Id = Convert.ToInt32(reader["statusId"].ToString());
+                            issue.Status.Id = Convert.ToInt32(reader["statusId"]);
                         if (!reader.IsDBNull(reader.GetOrdinal("typeId")))
-                            issue.Type.Id = Convert.ToInt32(reader["typeId"].ToString());
+                            issue.Type.Id = Convert.ToInt32(reader["typeId"]);
                         if (!reader.IsDBNull(reader.GetOrdinal("priorityId")))
-                            issue.Priority.Id = Convert.ToInt32(reader["priorityId"].ToString());
+                            issue.Priority.Id = Convert.ToInt32(reader["priorityId"]);
                         if (!reader.IsDBNull(reader.GetOrdinal("companyId")))
-                            issue.Company.Id = Convert.ToInt32(reader["companyId"].ToString());
+                            issue.Company.Id = Convert.ToInt32(reader["companyId"]);
                         if (!reader.IsDBNull(reader.GetOrdinal("service_objectId")))
-                            issue.Service_object.Id = Convert.ToInt32(reader["service_objectId"].ToString());
+                            issue.Service_object.Id = Convert.ToInt32(reader["service_objectId"]);
 
                         issues.Add(issue);
                     }
-                        return issues;
                 }
-                return null;
+                return issues;
 
             }
             catch (Exception e)
@@ -2584,6 +2472,139 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<ICollection<Issue>?> SelectOpenAndCompletedIssues(DateTime dateFrom, DateTime datedTo, int employeeId)
+        {
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
+            try
+            {
+                await connection.OpenAsync();
+                ICollection<Issue> issues = [];
+                Issue issue;
+
+                string sqlCommand = string.Format(
+                    "SELECT * " +
+                    "FROM issue " +
+                    "LEFT OUTER JOIN issue_status ON issue.statusId = issue_status.id  " +
+                    "WHERE (issue_status.code != 'completed' AND issue_status.code != 'closed' OR issue.completed_at BETWEEN '{0}' AND '{1}')  " +
+                    "AND issue.assignee_id = '{2}' AND issue.deleted_at IS NULL;",
+                    dateFrom.ToString("yyyy-MM-dd HH:mm:ss"), datedTo.ToString("yyyy-MM-dd HH:mm:ss"), employeeId);
+
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
+
+                using DbDataReader reader = await cmd.ExecuteReaderAsync();
+
+                if (reader.HasRows)
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        issue = new()
+                        {
+                            Status = new(),
+                            Priority = new(),
+                            Type = new(),
+                            Company = new(),
+                            Service_object = new(),
+
+                            Id = Convert.ToInt32(reader["id"])
+                        };
+
+                        if (!reader.IsDBNull(reader.GetOrdinal("assignee_id")))
+                            issue.Assignee_id = Convert.ToInt32(reader["assignee_id"].ToString());
+                        if (!reader.IsDBNull(reader.GetOrdinal("author_id")))
+                            issue.Author_id = Convert.ToInt32(reader["author_id"].ToString());
+                        if (!reader.IsDBNull(reader.GetOrdinal("title")))
+                            issue.Title = reader["title"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("employees_updated_at")))
+                            issue.Employees_updated_at = Convert.ToDateTime(reader["employees_updated_at"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("created_at")))
+                            issue.Created_at = Convert.ToDateTime(reader["created_at"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("completed_at")))
+                            issue.Completed_at = Convert.ToDateTime(reader["completed_at"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("deadline_at")))
+                            issue.Deadline_at = Convert.ToDateTime(reader["deadline_at"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("delay_to")))
+                            issue.Delay_to = Convert.ToDateTime(reader["delay_to"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("deleted_at")))
+                            issue.Deleted_at = Convert.ToDateTime(reader["deleted_at"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("statusId")))
+                            issue.Status.Id = Convert.ToInt32(reader["statusId"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("typeId")))
+                            issue.Type.Id = Convert.ToInt32(reader["typeId"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("priorityId")))
+                            issue.Priority.Id = Convert.ToInt32(reader["priorityId"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("companyId")))
+                            issue.Company.Id = Convert.ToInt32(reader["companyId"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("service_objectId")))
+                            issue.Service_object.Id = Convert.ToInt32(reader["service_objectId"]);
+
+                        issues.Add(issue);
+                    }
+                }
+                return issues;
+
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return null;
+            }
+            finally
+            {
+                await cmd.DisposeAsync();
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<int?> SelectCountCompletedOrClosedIssues(DateTime dateFrom, DateTime dateTo, int employeeId)
+        {
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
+            try
+            {
+                await connection.OpenAsync();
+
+                string sqlCommand = string.Format(
+                    "SELECT COUNT(*) AS numberSolvedIssues " +
+                    "FROM issue " +
+                    "LEFT OUTER JOIN issue_status ON issue.statusId = issue_status.id " +
+                    "WHERE (issue_status.code = 'completed' OR issue_status.code = 'closed') " +
+                    "AND (issue.completed_at BETWEEN '{0}' AND '{1}') " +
+                    "AND issue.assignee_id = '{2}' " +
+                    "AND issue.deleted_at IS NULL;",
+                    dateFrom.ToString("yyyy-MM-dd HH:mm:ss"), dateTo.ToString("yyyy-MM-dd HH:mm:ss"), employeeId);
+
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
+
+                using DbDataReader reader = await cmd.ExecuteReaderAsync();
+
+                if (reader.HasRows)
+                {
+                    await reader.ReadAsync();
+                    {
+                        if (!reader.IsDBNull(reader.GetOrdinal("numberSolvedIssues")))
+                            return Convert.ToInt32(reader["numberSolvedIssues"]);
+                    }
+                }
+                return null;
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return null;
+            }
+            finally
+            {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -2592,55 +2613,37 @@ namespace AqbaServer.Data
         public static async Task<Issue?> SelectIssue(int issueId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
-                Issue issue;
-                /*string sqlCommand = string.Format(
-                    "SELECT issue.id, issue.assignee_id, issue.author_id, issue.title, issue.created_at, issue.completed_at, issue.deadline_at, issue.delay_to, " +
-                    "issue.deleted_at, issue.companyId, issue.service_objectId, " +
-                    "issue_priority.id AS priorityId, issue_priority.name AS priorityName, " +
-                    "issue_priority.code AS priorityCode, issue_priority.position AS priorityPosition, issue_priority.color AS priorityColor, " +
-                    "issue_type.id AS typeId, issue_type.name AS typeName, issue_type.code AS typeCode, issue_type.default AS typeDefault, " +
-                    "issue_type.inner AS typeInner, issue_type.type AS typeType, issue_type.available_for_client AS typeAvailable, " +
-                    "issue_status.id AS statusId, issue_status.code AS statusCode, issue_status.name AS statusName, issue_status.color AS statusColor " +
-                    "FROM issue " +
-                    "JOIN issue_priority ON issue.priorityId = issue_priority.id " +
-                    "JOIN issue_type ON issue.typeId = issue_type.id " +
-                    "JOIN issue_status ON issue.statusId = issue_status.id " +
-                    "WHERE issue.id = '{0}'", issueId);*/
+                Issue? issue = null;                
                 string sqlCommand = $"SELECT * FROM issue WHERE id = '{issueId}'";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
 
                 if (reader.HasRows)
                 {
                     await reader.ReadAsync();
-                    issue = new()
-                    {
-                        Status = new(),
-                        Priority = new(),
-                        Type = new(),
-                        Company = new(),
-                        Service_object = new(),
+                    issue = new();
+                    issue.Status = new();
+                    issue.Priority = new();
+                    issue.Type = new();
+                    issue.Company = new();
+                    issue.Service_object = new();
 
-                        Id = Convert.ToInt32(reader["id"])
-                    };
-
+                    issue.Id = Convert.ToInt32(reader["id"]);
                     if (!reader.IsDBNull(reader.GetOrdinal("assignee_id")))
                         issue.Assignee_id = Convert.ToInt32(reader["assignee_id"].ToString());
                     if (!reader.IsDBNull(reader.GetOrdinal("author_id")))
                         issue.Author_id = Convert.ToInt32(reader["author_id"].ToString());
                     if (!reader.IsDBNull(reader.GetOrdinal("title")))
                         issue.Title = reader["title"].ToString();
-                    if (!reader.IsDBNull(reader.GetOrdinal("internal_status")))
-                        issue.Internal_status = reader["internal_status"].ToString();
+                    if (!reader.IsDBNull(reader.GetOrdinal("employees_updated_at")))
+                        issue.Employees_updated_at = Convert.ToDateTime(reader["employees_updated_at"]);
                     if (!reader.IsDBNull(reader.GetOrdinal("created_at")))
                         issue.Created_at = Convert.ToDateTime(reader["created_at"]);
                     if (!reader.IsDBNull(reader.GetOrdinal("completed_at")))
@@ -2652,46 +2655,17 @@ namespace AqbaServer.Data
                     if (!reader.IsDBNull(reader.GetOrdinal("deleted_at")))
                         issue.Deleted_at = Convert.ToDateTime(reader["deleted_at"]);
                     if (!reader.IsDBNull(reader.GetOrdinal("statusId")))
-                        issue.Status.Id = Convert.ToInt32(reader["statusId"].ToString());
+                        issue.Status.Id = Convert.ToInt32(reader["statusId"]);
                     if (!reader.IsDBNull(reader.GetOrdinal("typeId")))
-                        issue.Type.Id = Convert.ToInt32(reader["typeId"].ToString());
+                        issue.Type.Id = Convert.ToInt32(reader["typeId"]);
                     if (!reader.IsDBNull(reader.GetOrdinal("priorityId")))
-                        issue.Priority.Id = Convert.ToInt32(reader["priorityId"].ToString());
+                        issue.Priority.Id = Convert.ToInt32(reader["priorityId"]);
                     if (!reader.IsDBNull(reader.GetOrdinal("companyId")))
-                        issue.Company.Id = Convert.ToInt32(reader["companyId"].ToString());
+                        issue.Company.Id = Convert.ToInt32(reader["companyId"]);
                     if (!reader.IsDBNull(reader.GetOrdinal("service_objectId")))
-                        issue.Service_object.Id = Convert.ToInt32(reader["service_objectId"].ToString());
-
-                    /*if (!reader.IsDBNull(reader.GetOrdinal("priorityName")))
-                        issue.Priority.Name = reader["priorityName"].ToString();
-                    if (!reader.IsDBNull(reader.GetOrdinal("priorityCode")))
-                        issue.Priority.Code = reader["priorityCode"].ToString();
-                    if (!reader.IsDBNull(reader.GetOrdinal("priorityPosition")))
-                        issue.Priority.Position = Convert.ToInt32(reader["priorityPosition"].ToString());
-                    if (!reader.IsDBNull(reader.GetOrdinal("priorityColor")))
-                        issue.Priority.Color = reader["priorityColor"].ToString();
-                    if (!reader.IsDBNull(reader.GetOrdinal("typeName")))
-                        issue.Type.Name = reader["typeName"].ToString();
-                    if (!reader.IsDBNull(reader.GetOrdinal("typeCode")))
-                        issue.Type.Code = reader["typeCode"].ToString();
-                    if (!reader.IsDBNull(reader.GetOrdinal("typeDefault")))
-                        issue.Type.Default = Convert.ToBoolean(reader["typeDefault"]);
-                    if (!reader.IsDBNull(reader.GetOrdinal("typeInner")))
-                        issue.Type.Inner = Convert.ToBoolean(reader["typeInner"]);
-                    if (!reader.IsDBNull(reader.GetOrdinal("typeType")))
-                        issue.Type.Type = reader["typeType"].ToString();
-                    if (!reader.IsDBNull(reader.GetOrdinal("typeAvailable")))
-                        issue.Type.Available_for_client = Convert.ToBoolean(reader["typeAvailable"]);
-                    if (!reader.IsDBNull(reader.GetOrdinal("statusCode")))
-                        issue.Status.Code = reader["statusCode"].ToString();
-                    if (!reader.IsDBNull(reader.GetOrdinal("statusName")))
-                        issue.Status.Name = reader["statusName"].ToString();
-                    if (!reader.IsDBNull(reader.GetOrdinal("statusColor")))
-                        issue.Status.Color = reader["statusColor"].ToString();*/
-
-                    return issue;
+                        issue.Service_object.Id = Convert.ToInt32(reader["service_objectId"]);
                 }
-                return null;
+                return issue;
 
             }
             catch (Exception e)
@@ -2701,25 +2675,25 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<TaskType?> SelectType(TaskType type)
+        public static async Task<IssueType?> SelectType(IssueType? type)
         {
+            if (type == null) return null;
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
-                TaskType tp;
+                IssueType tp;
                 string sqlCommand = $"SELECT * FROM issue_type WHERE code = '{type.Code}'";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -2751,26 +2725,25 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<List<TaskType>?> SelectTypes()
+        public static async Task<ICollection<IssueType>?> SelectTypes()
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
-                List<TaskType> types = [];
-                TaskType? type;
+                ICollection<IssueType> types = [];
+                IssueType? type;
                 string sqlCommand = "SELECT * FROM issue_type";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -2806,25 +2779,25 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<Status?> SelectIssueStatus(Status status)
+        public static async Task<Status?> SelectIssueStatus(Status? status)
         {
+            if (status == null) return null;
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
                 Status st;
                 string sqlCommand = $"SELECT * FROM issue_status WHERE code = '{status.Code}'";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -2850,26 +2823,25 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<List<Status>?> SelectIssueStatuses()
+        public static async Task<ICollection<Status>?> SelectIssueStatuses()
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
-                List<Status> statuses = [];
+                ICollection<Status> statuses = [];
                 Status? status;
                 string sqlCommand = "SELECT * FROM issue_status";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -2899,25 +2871,25 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<Priority?> SelectIssuePriority(Priority priority)
+        public static async Task<Priority?> SelectIssuePriority(Priority? priority)
         {
+            if (priority == null) return null;
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
                 Priority pt;
                 string sqlCommand = $"SELECT * FROM issue_priority WHERE code = '{priority.Code}'";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -2930,7 +2902,7 @@ namespace AqbaServer.Data
                     if (!reader.IsDBNull(reader.GetOrdinal("code")))
                         pt.Code = reader["code"].ToString();
                     if (!reader.IsDBNull(reader.GetOrdinal("position")))
-                        pt.Position = Convert.ToInt32(reader["position"].ToString());
+                        pt.Position = Convert.ToInt32(reader["position"]);
                     if (!reader.IsDBNull(reader.GetOrdinal("color")))
                         pt.Color = reader["color"].ToString();
 
@@ -2945,26 +2917,25 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<List<Priority>?> SelectIssuePriorities()
+        public static async Task<ICollection<Priority>?> SelectIssuePriorities()
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
-                List<Priority> priorities = [];
+                ICollection<Priority> priorities = [];
                 Priority? priority;
                 string sqlCommand = "SELECT * FROM issue_priority";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 using DbDataReader reader = await cmd.ExecuteReaderAsync();
                 if (reader.HasRows)
@@ -2979,7 +2950,7 @@ namespace AqbaServer.Data
                         if (!reader.IsDBNull(reader.GetOrdinal("code")))
                             priority.Code = reader["code"].ToString();
                         if (!reader.IsDBNull(reader.GetOrdinal("position")))
-                            priority.Position = Convert.ToInt32(reader["position"].ToString());
+                            priority.Position = Convert.ToInt32(reader["position"]);
                         if (!reader.IsDBNull(reader.GetOrdinal("color")))
                             priority.Color = reader["color"].ToString();
 
@@ -2996,6 +2967,199 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<TimeEntry?> SelectTimeEntry(int timeEntryId)
+        {
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
+            try
+            {
+                await connection.OpenAsync();
+                TimeEntry? timeEntry = null;
+                string sqlCommand = $"SELECT * FROM time_entry WHERE id = {timeEntryId}";
+
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
+
+                using DbDataReader reader = await cmd.ExecuteReaderAsync();
+                if (reader.HasRows)
+                {
+                    await reader.ReadAsync();
+
+                    timeEntry = new();
+                    timeEntry.Employee = new();
+
+                    timeEntry.Id = Convert.ToInt32(reader["id"]);
+                    if (!reader.IsDBNull(reader.GetOrdinal("employeeId")))
+                        timeEntry.Employee.Id = Convert.ToInt32(reader["employeeId"].ToString());
+                    if (!reader.IsDBNull(reader.GetOrdinal("spentTime")))
+                        timeEntry.Spent_Time = Convert.ToDouble(reader["spentTime"]);
+                    if (!reader.IsDBNull(reader.GetOrdinal("issueId")))
+                        timeEntry.Issue_id = Convert.ToInt32(reader["issueId"]);
+                    if (!reader.IsDBNull(reader.GetOrdinal("logged_at")))
+                        timeEntry.Logged_At = Convert.ToDateTime(reader["logged_at"]);
+
+                }
+                return timeEntry;
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return null;
+            }
+            finally
+            {
+                await cmd.DisposeAsync();
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<ICollection<TimeEntry>?> SelectTimeEntries(DateTime? dateFrom, DateTime? dateTo)
+        {
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
+            try
+            {
+                await connection.OpenAsync();
+                ICollection<TimeEntry> timeEntries = [];
+                TimeEntry? timeEntry = null;
+                string sqlCommand = string.Format(
+                    "SELECT * " +
+                    "FROM time_entry " +
+                    "WHERE logged_at BETWEEN '{0}' AND '{1}'",
+                    dateFrom?.ToString("yyyy-MM-dd HH:mm:ss"), dateTo?.ToString("yyyy-MM-dd HH:mm:ss"));
+
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
+
+                using DbDataReader reader = await cmd.ExecuteReaderAsync();
+                if (reader.HasRows)
+                {
+                    while(await reader.ReadAsync())
+                    {
+                        timeEntry = new();
+                        timeEntry.Employee = new();
+
+                        timeEntry.Id = Convert.ToInt32(reader["id"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("employeeId")))
+                            timeEntry.Employee.Id = Convert.ToInt32(reader["employeeId"].ToString());
+                        if (!reader.IsDBNull(reader.GetOrdinal("spentTime")))
+                            timeEntry.Spent_Time = Convert.ToDouble(reader["spentTime"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("issueId")))
+                            timeEntry.Issue_id = Convert.ToInt32(reader["issueId"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("logged_at")))
+                            timeEntry.Logged_At = Convert.ToDateTime(reader["logged_at"]);
+
+                        timeEntries.Add(timeEntry);
+                    }
+                    return timeEntries;
+                }
+                return timeEntries;
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return null;
+            }
+            finally
+            {
+                await cmd.DisposeAsync();
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<double?> SelectTimeEntry(DateTime dateFrom, DateTime dateTo, int employeeId)
+        {
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
+            try
+            {
+                await connection.OpenAsync();
+                string sqlCommand = string.Format(
+                    "SELECT SUM(spentTime) AS spentTime " +
+                    "FROM time_entry " +
+                    "WHERE employeeId = {2} AND (logged_at BETWEEN '{0}' AND '{1}')",
+                    dateFrom.ToString("yyyy-MM-dd HH:mm:ss"), dateTo.ToString("yyyy-MM-dd HH:mm:ss"), employeeId);
+
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
+
+                using DbDataReader reader = await cmd.ExecuteReaderAsync();
+                if (reader.HasRows)
+                {
+                    await reader.ReadAsync();
+
+                    if (!reader.IsDBNull(reader.GetOrdinal("spentTime")))
+                        return Convert.ToDouble(reader["spentTime"]);
+                }
+                return null;
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return null;
+            }
+            finally
+            {
+                await cmd.DisposeAsync();
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<ICollection<TimeEntry>?> SelectTimeEntriesByIssueId(int issueId)
+        {
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
+            try
+            {
+                await connection.OpenAsync();
+                ICollection<TimeEntry> timeEntries = [];
+                TimeEntry? timeEntry = null;
+                string sqlCommand = $"SELECT * FROM time_entry WHERE issueId = {issueId}";
+
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
+
+                using DbDataReader reader = await cmd.ExecuteReaderAsync();
+                if (reader.HasRows)
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        timeEntry = new();
+                        timeEntry.Employee = new();
+
+                        timeEntry.Id = Convert.ToInt32(reader["id"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("employeeId")))
+                            timeEntry.Employee.Id = Convert.ToInt32(reader["employeeId"].ToString());
+                        if (!reader.IsDBNull(reader.GetOrdinal("spentTime")))
+                            timeEntry.Spent_Time = Convert.ToDouble(reader["spentTime"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("issueId")))
+                            timeEntry.Issue_id = Convert.ToInt32(reader["issueId"]);
+                        if (!reader.IsDBNull(reader.GetOrdinal("logged_at")))
+                            timeEntry.Logged_At = Convert.ToDateTime(reader["logged_at"]);
+
+                        timeEntries.Add(timeEntry);
+                    }
+                    return timeEntries;
+                }
+                return timeEntries;
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return null;
+            }
+            finally
+            {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }

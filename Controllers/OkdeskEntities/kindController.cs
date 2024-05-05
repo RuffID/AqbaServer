@@ -61,13 +61,24 @@ namespace AqbaServer.Controllers.OkdeskEntities
         [ProducesResponseType(200)]
         public async Task<IActionResult> GetKindsFromOkdesk()
         {
-            if (!await _kindRepository.GetKindsFromOkdesk())
+            if (!await _kindRepository.UpdateKindsFromAPIOkdesk())
             {
-                ModelState.AddModelError("", "Something went wrong when retrieving kinds from okdesk");
+                ModelState.AddModelError("", "Внутренняя ошибка при получении kinds с API окдеска");
                 return StatusCode(500, ModelState);
             }
 
             return Ok();
+        }
+
+        [HttpGet("okdeskDB")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(500)]
+        public async Task<IActionResult> GetKindsFromDBOkdesk()
+        {
+            if (await _kindRepository.UpdateKindsFromDBOkdesk() == false)
+                return StatusCode(500, "Внутренняя ошибка при получении kinds из БД окдеска");
+
+            return Ok("Kinds успешно обновлены");
         }
 
         [HttpPost, Authorize(Roles = UserRole.Admin)]

@@ -40,6 +40,7 @@ try
     builder.Services.AddScoped<IIssueStatusRepository, IssueStatusRepository>();
     builder.Services.AddScoped<IIssueTypeRepository, IssueTypeRepository>();
     builder.Services.AddScoped<IIssueRepository, IssueRepository>();
+    builder.Services.AddScoped<ITimeEntryRepository, TimeEntryRepository>();
     
     builder.Services.AddAuthentication().AddJwtBearer(options =>
         {
@@ -95,11 +96,11 @@ try
 
     builder.Services.AddHostedService<CheckLogFilesService>();
 
-    builder.Services.AddHostedService<LoginService>();
-    builder.Services.AddHostedService<UpdateDirectoriesService>();
-    builder.Services.AddHostedService<ThirtyMinutesReportService>();
+    //builder.Services.AddHostedService<LoginService>();
+    //builder.Services.AddHostedService<UpdateDirectoriesService>();
+    /*builder.Services.AddHostedService<ThirtyMinutesReportService>();
     builder.Services.AddHostedService<OneDayReportService>();
-    builder.Services.AddHostedService<WeekReportService>();
+    builder.Services.AddHostedService<WeekReportService>();*/
 
     var app = builder.Build();
     Config.LoadConfig(app.Configuration);

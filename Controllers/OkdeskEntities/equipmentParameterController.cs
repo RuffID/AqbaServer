@@ -42,22 +42,6 @@ namespace AqbaServer.Controllers.OkdeskEntities
             return Ok(equipmentParameters);
         }
 
-        /*[HttpGet]
-        [ProducesResponseType(200, Type = typeof(EquipmentParameter))]
-        [ProducesResponseType(400)]
-        public async Task<IActionResult> GetEquipmentParameter([FromQuery] int equipmentId, [FromQuery] int kindParamId)
-        {
-            var equipmentParameter = _mapper.Map<EquipmentParameterDto>(await _equipmentParameterRepository.GetEquipmentParameter(equipmentId, kindParamId));
-
-            if (equipmentParameter == null)
-                return NotFound();
-
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            return Ok(equipmentParameter);
-        }*/
-
         [HttpPost, Authorize(Roles = UserRole.Admin)]
         [ProducesResponseType(204)]
         [ProducesResponseType(400)]
@@ -67,6 +51,12 @@ namespace AqbaServer.Controllers.OkdeskEntities
                 return BadRequest(ModelState);
 
             var kindParameter = await _kindParameterRepository.GetKindParameter(kindParameterCode);
+            if (kindParameter == null)
+            {
+                ModelState.AddModelError("", "Something went wrong while saving equipment parameter");
+                return StatusCode(500, ModelState);
+            }
+
             var equipmentParameter = await _equipmentParameterRepository.GetEquipmentParameter(equipmentId, kindParameter.Id);
 
             if (equipmentParameter != null)
@@ -77,6 +67,11 @@ namespace AqbaServer.Controllers.OkdeskEntities
 
             var equipment = await _equipmentRepository.GetEquipment(equipmentId);
 
+            if (equipment == null)
+            {
+                ModelState.AddModelError("", "Something went wrong while saving equipment parameter");
+                return StatusCode(500, ModelState);
+            }
 
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -86,7 +81,7 @@ namespace AqbaServer.Controllers.OkdeskEntities
             equipmentParameterMap.Equipment = equipment;
             equipmentParameterMap.KindParam = kindParameter;
 
-            if (!await _equipmentParameterRepository.CreateEquipmentParameter(equipmentParameterMap, equipment))
+            if (!await _equipmentParameterRepository.CreateEquipmentParameter(equipmentParameterMap))
             {
                 ModelState.AddModelError("", "Something went wrong while saving equipment parameter");
                 return StatusCode(500, ModelState);
@@ -105,6 +100,12 @@ namespace AqbaServer.Controllers.OkdeskEntities
                 return BadRequest(ModelState);
 
             var kindParameter = await _kindParameterRepository.GetKindParameter(kindParameterCode);
+
+            if (kindParameter == null)
+            {
+                ModelState.AddModelError("", "Something went wrong while saving equipment parameter");
+                return StatusCode(500, ModelState);
+            }
 
             if (await _equipmentParameterRepository.GetEquipmentParameter(equipmentId, kindParameter.Id) == null)
                 return NotFound();

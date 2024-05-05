@@ -1,4 +1,6 @@
-﻿using AqbaServer.Data;
+﻿using AqbaServer.API;
+using AqbaServer.Data.MySql;
+using AqbaServer.Data.Postgresql;
 using AqbaServer.Interfaces.OkdeskEntities;
 using AqbaServer.Models.OkdeskPerformance;
 
@@ -21,20 +23,23 @@ namespace AqbaServer.Repository.OkdeskEntities
             _kindParameterRepository = kindParameterRepository;
         }
 
-        public async Task<bool> CreateEquipment(Equipment equipment)
+        public async Task<bool> CreateEquipment(Equipment? equipment)
         {
-            var kind = await _kindRepository.GetKind(equipment?.Equipment_kind?.Code);
+            if (equipment == null) return false;
+
+            var kind = await _kindRepository.GetKind(equipment.Equipment_kind?.Code);
             equipment.Equipment_kind = kind;
-            var manufacturer = await _manufacturerRepository.GetManufacturer(equipment?.Equipment_manufacturer?.Code);
+            var manufacturer = await _manufacturerRepository.GetManufacturer(equipment.Equipment_manufacturer?.Code);
             equipment.Equipment_manufacturer = manufacturer;
-            var model = await _modelRepository.GetModel(equipment?.Equipment_model?.Code);
+            var model = await _modelRepository.GetModel(equipment.Equipment_model?.Code);
             equipment.Equipment_model = model;
 
             return await DBInsert.InsertEquipment(equipment);
         }
 
-        public async Task<bool> DeleteEquipment(Equipment equipment)
+        public async Task<bool> DeleteEquipment(Equipment? equipment)
         {
+            if (equipment == null) return false;
             if (await DBDelete.DeleteEquipmentParameterByEquipment(equipment.Id))
                 return await DBDelete.DeleteEquipment(equipment.Id);
             else return false;
@@ -50,74 +55,44 @@ namespace AqbaServer.Repository.OkdeskEntities
             return await DBSelect.SelectLastEquipment();
         }
 
-        public async Task<bool> GetEquipmentsFromOkdesk(int equipmentId = 0, int pageSize = 100)
+        public async Task<bool> UpdateEquipmentsFromAPIOkdesk(int equipmentId = 0, int pageSize = 100, int maintenanceEntityId = 0, int companyId = 0)
         {
-            var equipments = await API.OkdeskEntitiesRequest.GetEquipments(equipmentId, pageSize);
-            if (equipments == null || equipments.Count <= 0) return false;
+            var equipments = await OkdeskEntitiesRequest.GetEquipments(equipmentId, pageSize, maintenanceEntityId, companyId);
 
-            foreach (var equipment in equipments)
+            return await SaveOrUpdateInDB(equipments);
+        }
+
+        public async Task<bool> UpdateEquipmentsFromDBOkdesk(long lastEquipmentId = 0)
+        {
+            ICollection<Equipment>? equipments = [];
+            
+            while (true)
             {
-                var tempEquip = await GetEquipment(equipment.Id);
-                if (tempEquip == null)
+                if (equipments.Count > 0)
+                    lastEquipmentId = equipments.Last().Id;
+
+                #if DEBUG
+                await Console.Out.WriteLineAsync($"[Method: {nameof(UpdateEquipmentsFromDBOkdesk)}] Last equipment ID: " + lastEquipmentId);
+                #endif
+
+                equipments = await PGSelect.SelectEquipments(lastEquipmentId);
+
+                if (equipments == null || equipments.Count <= 0)
+                    break;
+                else await SaveOrUpdateInDB(equipments);
+
+                if (equipments.Count < PGSelect.limitForEquipment)
                 {
-                    if (!await CreateEquipment(equipment))
-                        return false;
-                }
-                else if (tempEquip != null)
-                {
-                    if (!await UpdateEquipment(tempEquip.Id, equipment))
-                        return false;
-                }
-
-                // После обновления основной информации об оборудовании идёт создание либо обновление параметров
-                // Т.к. в API окдеска нет получения kind параметров, то приходится вытягивать его из оборудования
-                // То есть при каждом создании либо обновлении оборудования проверяется есть ли параметр и в случае надобности добавляется
-
-                if (equipment?.Parameters?.Count > 0)
-                {
-                    foreach (var param in equipment.Parameters)
-                    {
-                        // Сначала создание справочников, kind, kind param (связующая таблица) и непосредственно kind parameter
-                        var kind = await _kindRepository.GetKind(equipment?.Equipment_kind?.Code);
-                        if (kind == null) return false;
-                        var tempKindParam = await _kindParameterRepository.GetKindParameter(param?.Code);
-
-                        if (tempKindParam == null)
-                        {
-                            if (!await _kindParameterRepository.CreateKindParameter(kind.Id, param))
-                                return false;
-                        }
-                        else if (tempKindParam != null)
-                        {
-                            if (!await _kindParameterRepository.UpdateKindParameter(kind.Id, tempKindParam?.Code, param))
-                                return false;
-                        }
-
-                        // Повторная загрузка параметра для получения id в БД
-                        tempKindParam = await _kindParameterRepository.GetKindParameter(param.Code);
-                        // Проверка есть ли уже в БД equipment параметр
-                        var tempEquipParam = await _equipmentParameterRepository.GetEquipmentParameter(equipment.Id, tempKindParam.Id);
-                        param.Equipment = equipment;
-                        param.KindParam = tempKindParam;
-
-                        // Если его нет, то создание, иначе обновление
-                        if (tempEquipParam == null)
-                        {
-                            if (!await _equipmentParameterRepository.CreateEquipmentParameter(param, equipment))
-                                return false;
-                        }
-                        else if (tempEquipParam != null)
-                        {
-                            if (!await _equipmentParameterRepository.UpdateEquipmentParameter(tempEquipParam.Id, param))
-                                return false;
-                        }
-                    }
+                    #if DEBUG
+                    await Console.Out.WriteLineAsync($"[Method: {nameof(UpdateEquipmentsFromDBOkdesk)} has been completed]");
+                    #endif
+                    break;
                 }
             }
             return true;
-        }
+        }        
 
-        public async Task<ICollection<Equipment>> GetEquipments(int equipmentId)
+        public async Task<ICollection<Equipment>?> GetEquipments(int equipmentId)
         {
             return await DBSelect.SelectEquipments(equipmentId);
         }
@@ -137,17 +112,79 @@ namespace AqbaServer.Repository.OkdeskEntities
             return await DBSelect.SelectEquipmentsByCompany(companyId);
         }
 
-        public async Task<bool> UpdateEquipment(int equipmentId, Equipment equipment)
+        public async Task<bool> UpdateEquipment(int equipmentId, Equipment? equipment)
         {
-            var kind = await _kindRepository.GetKind(equipment?.Equipment_kind?.Code);
+            if (equipment == null) return false;
+
+            await CheckEquipment(equipment);
+            
+            return await DBUpdate.UpdateEquipment(equipmentId, equipment);            
+        }
+        
+        async Task CheckEquipment(Equipment? equipment)
+        {
+            if (equipment == null) return;
+
+            var kind = await _kindRepository.GetKind(equipment.Equipment_kind?.Code);
             equipment.Equipment_kind = kind;
-            var manufacturer = await _manufacturerRepository.GetManufacturer(equipment?.Equipment_manufacturer?.Code);
+            var manufacturer = await _manufacturerRepository.GetManufacturer(equipment.Equipment_manufacturer?.Code);
             equipment.Equipment_manufacturer = manufacturer;
-            var model = await _modelRepository.GetModel(equipment?.Equipment_model?.Code);
+            var model = await _modelRepository.GetModel(equipment.Equipment_model?.Code);
             equipment.Equipment_model = model;
+        }
 
+        async Task<bool> SaveOrUpdateInDB(ICollection<Equipment>? equipments)
+        {
+            if (equipments != null && equipments.Count > 0)
+            {
+                foreach (var equipment in equipments)
+                    await CheckEquipment(equipment);
 
-            return await DBUpdate.UpdateEquipment(equipmentId, equipment);
+                foreach (var equipment in equipments)
+                {
+                    var tempEquip = await GetEquipment(equipment.Id);
+                    if (tempEquip == null)
+                    {
+                        if (!await CreateEquipment(equipment))
+                            return false;
+                    }
+                    else if (tempEquip != null)
+                    {
+                        if (!await UpdateEquipment(tempEquip.Id, equipment))
+                            return false;
+                    }
+
+                    if (equipment.Parameters != null && equipment.Parameters.Count > 0)
+                    {
+                        foreach (var param in equipment.Parameters)
+                        {
+                            if (string.IsNullOrEmpty(param.Value)) continue;
+
+                            var tempKindParam = await _kindParameterRepository.GetKindParameter(param.Code);
+                            if (tempKindParam == null) continue;
+
+                            // Проверка есть ли уже в БД запись в таблице "parameter"
+                            var tempEquipParam = await _equipmentParameterRepository.GetEquipmentParameter(equipment.Id, tempKindParam.Id);
+
+                            param.Equipment = equipment;
+                            param.KindParam = tempKindParam;
+
+                            // Если его нет, то создание, иначе обновление
+                            if (tempEquipParam == null)
+                            {
+                                if (!await _equipmentParameterRepository.CreateEquipmentParameter(param))
+                                    continue;
+                            }
+                            else if (tempEquipParam != null)
+                            {
+                                if (!await _equipmentParameterRepository.UpdateEquipmentParameter(tempEquipParam.Id, param))
+                                    continue;
+                            }
+                        }
+                    }
+                }
+            }
+            return true;
         }
     }
 }

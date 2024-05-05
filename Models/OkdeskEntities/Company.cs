@@ -15,6 +15,8 @@ namespace AqbaServer.Models.OkdeskPerformance
 
         [JsonProperty("active")]
         public bool? Active { get; set; }
+
+        [JsonProperty("category")]
         public Category? Category { get; set; }
 
         public Company()

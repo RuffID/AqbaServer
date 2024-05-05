@@ -5,6 +5,7 @@ using AqbaServer.Models.OkdeskPerformance;
 using AqbaServer.Interfaces.OkdeskEntities;
 using Microsoft.AspNetCore.Authorization;
 using AqbaServer.Models.Authorization;
+using AqbaServer.Repository.OkdeskEntities;
 
 namespace AqbaServer.Controllers.OkdeskEntities
 {
@@ -66,6 +67,17 @@ namespace AqbaServer.Controllers.OkdeskEntities
             }
 
             return Ok();
+        }
+
+        [HttpGet("okdeskDB")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(500)]
+        public async Task<IActionResult> GetManufacturersFromDBOkdesk()
+        {
+            if (await _manufacturerRepository.UpdateManufacturersFromDBOkdesk() == false)
+                return StatusCode(500, "Внутренняя ошибка при получении производителей из БД окдеска");
+
+            return Ok("Производители успешно обновлены");
         }
 
         [HttpPost, Authorize(Roles = UserRole.Admin)]

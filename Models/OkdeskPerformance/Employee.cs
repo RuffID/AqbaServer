@@ -5,8 +5,8 @@ namespace AqbaServer.Models.OkdeskPerformance
     public class Employee
     {
         public int Id { get; set; }
-        public string Last_name { get; set; }
-        public string First_name { get; set; }
+        public string? Last_name { get; set; }
+        public string? First_name { get; set; }
         public string? Patronymic { get; set; }
         public string? Position { get; set; }
         public bool Active { get; set; }
@@ -18,7 +18,7 @@ namespace AqbaServer.Models.OkdeskPerformance
         public Role[]? Roles { get; set; }
         public int SolvedTasks { get; set; }
         public double SpentedTimeDouble { get; set; }
-        public List<Issue>? Issues { get; set; }
+        public ICollection<Issue>? Issues { get; set; }
 
         public Employee() { Issues = []; }
         public Employee(Employee employee)

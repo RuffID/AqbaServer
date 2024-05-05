@@ -1,34 +1,33 @@
-﻿using AqbaServer.Dto;
-using AqbaServer.Helper;
+﻿using AqbaServer.Helper;
 using AqbaServer.Models.Authorization;
 using AqbaServer.Models.OkdeskPerformance;
 using AqbaServer.Models.OkdeskReport;
 using MySql.Data.MySqlClient;
 
-namespace AqbaServer.Data
+namespace AqbaServer.Data.MySql
 {
     public class DBUpdate
     {
-        public static async Task<bool> UpdateCategory(int categoryId, Category category)
+        public static async Task<bool> UpdateCategory(string categoryCode, Category category)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
                 string sqlCommand =
                     "UPDATE company_category " +
-                    "SET id = @id, color = @color " +
-                    "WHERE id = @categoryId";
+                    "SET id = @id, code = @code, name = @name, color = @color " +
+                    "WHERE code = @categoryCode";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = category.Id;
-                cmd.Parameters.Add("@categoryId", MySqlDbType.Int32).Value = categoryId;
-                cmd.Parameters.Add("@color", MySqlDbType.String).Value = category.Color;
+                cmd.Parameters.Add("@categoryCode", MySqlDbType.String).Value = categoryCode;
+                cmd.Parameters.Add("@code", MySqlDbType.String).Value = category?.Code;
+                cmd.Parameters.Add("@name", MySqlDbType.String).Value = category?.Name;
+                cmd.Parameters.Add("@color", MySqlDbType.String).Value = category?.Color;
 
                 await cmd.ExecuteNonQueryAsync();
 
@@ -41,6 +40,44 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<bool> UpdateCategoryWithoutColor(string categoryCode, Category category)
+        {
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
+            try
+            {
+                await connection.OpenAsync();
+                string sqlCommand =
+                    "UPDATE company_category " +
+                    "SET id = @id, code = @code, name = @name " +
+                    "WHERE code = @categoryCode";
+
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
+
+                cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = category.Id;
+                cmd.Parameters.Add("@categoryCode", MySqlDbType.String).Value = categoryCode;
+                cmd.Parameters.Add("@code", MySqlDbType.String).Value = category?.Code;
+                cmd.Parameters.Add("@name", MySqlDbType.String).Value = category?.Name;
+
+                await cmd.ExecuteNonQueryAsync();
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return false;
+            }
+            finally
+            {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -49,6 +86,7 @@ namespace AqbaServer.Data
         public static async Task<bool> UpdateCompany(int companyId, Company company)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -57,20 +95,16 @@ namespace AqbaServer.Data
                     "SET id = @id, name = @name, additional_name = @additional_name, active = @active, categoryId = @categoryId " +
                     "WHERE id = @companyId";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
+
+                company.Category ??= new();
 
                 cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = company.Id;
                 cmd.Parameters.Add("@companyId", MySqlDbType.Int32).Value = companyId;
                 cmd.Parameters.Add("@name", MySqlDbType.String).Value = company.Name;
                 cmd.Parameters.Add("@additional_name", MySqlDbType.String).Value = company.AdditionalName;
                 cmd.Parameters.Add("@active", MySqlDbType.Bit).Value = company.Active;
-                if (company?.Category?.Id == null)
-                    if (company?.Category == null)
-                        company.Category = new();
                 cmd.Parameters.Add("@categoryId", MySqlDbType.Int32).Value = company?.Category?.Id;
                 await cmd.ExecuteNonQueryAsync();
 
@@ -83,6 +117,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -91,24 +126,23 @@ namespace AqbaServer.Data
         public static async Task<bool> UpdateMaintenanceEntity(int maintenanceEntityId, MaintenanceEntity maintenanceEntity)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
                 string sqlCommand =
                     "UPDATE maintenance_entity " +
-                    "SET id = @id, name = @name, address = @address, companyId = @companyId " +
+                    "SET id = @id, name = @name, address = @address, active = @active, companyId = @companyId " +
                     "WHERE id = @maintenanceEntityId";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = maintenanceEntity.Id;
                 cmd.Parameters.Add("@maintenanceEntityId", MySqlDbType.Int32).Value = maintenanceEntityId;
                 cmd.Parameters.Add("@name", MySqlDbType.String).Value = maintenanceEntity?.Name;
                 cmd.Parameters.Add("@address", MySqlDbType.String).Value = maintenanceEntity?.Address;
+                cmd.Parameters.Add("@active", MySqlDbType.Bit).Value = maintenanceEntity?.Active;
                 cmd.Parameters.Add("@companyId", MySqlDbType.Int32).Value = maintenanceEntity?.Company_Id;
                 await cmd.ExecuteNonQueryAsync();
 
@@ -121,6 +155,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -129,6 +164,7 @@ namespace AqbaServer.Data
         public static async Task<bool> UpdateManufacturer(string manufacturerCode, Manufacturer manufacturer)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -137,11 +173,8 @@ namespace AqbaServer.Data
                     "SET code = @code, name = @name, description = @description, visible = @visible " +
                     "WHERE code = @manufacturerCode";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 cmd.Parameters.Add("@manufacturerCode", MySqlDbType.String).Value = manufacturerCode;
                 cmd.Parameters.Add("@code", MySqlDbType.String).Value = manufacturer.Code;
@@ -159,6 +192,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -167,6 +201,7 @@ namespace AqbaServer.Data
         public static async Task<bool> UpdateKind(string kindCode, Kind kind)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -175,11 +210,8 @@ namespace AqbaServer.Data
                     "SET code = @code, name = @name, description = @description, visible = @visible " +
                     "WHERE code = @kindCode";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 cmd.Parameters.Add("@kindCode", MySqlDbType.String).Value = kindCode;
                 cmd.Parameters.Add("@code", MySqlDbType.String).Value = kind.Code;
@@ -197,6 +229,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -205,6 +238,7 @@ namespace AqbaServer.Data
         public static async Task<bool> UpdateKindParameter(string kindParameterCode, KindParameter parameter)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -213,12 +247,10 @@ namespace AqbaServer.Data
                     "SET code = @code, name = @name, fieldType = @fieldType " +
                     "WHERE code = @kindParameterCode";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
+                //cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = parameter.Id;
                 cmd.Parameters.Add("@kindParameterCode", MySqlDbType.String).Value = kindParameterCode;
                 cmd.Parameters.Add("@name", MySqlDbType.String).Value = parameter.Name;
                 cmd.Parameters.Add("@code", MySqlDbType.String).Value = parameter.Code;
@@ -234,36 +266,7 @@ namespace AqbaServer.Data
             }
             finally
             {
-                await connection.CloseAsync();
-                await connection.DisposeAsync();
-            }
-        }
-
-        public static async Task<bool> UpdateCoordinate(int maintenanceEntityId, decimal[] coord)
-        {
-            MySqlConnection connection = DBConfig.GetDBConnection();
-            try
-            {
-                await connection.OpenAsync();
-                string sqlCommand = $"UPDATE coordinates SET N = {coord[0]}, E = {coord[1]} WHERE maintenanceEntitiesId = {maintenanceEntityId}";
-
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
-
-                cmd.ExecuteReader();
-
-                return true;
-            }
-            catch (Exception e)
-            {
-                WriteLog.Error(e.ToString());
-                return false;
-            }
-            finally
-            {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -272,6 +275,7 @@ namespace AqbaServer.Data
         public static async Task<bool> UpdateModel(string modelCode, Model model)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -280,11 +284,8 @@ namespace AqbaServer.Data
                     "SET code = @code, name = @name, description = @description, visible = @visible, kindId = @kindId, manufacturerId = @manufacturerId " +
                     "WHERE code = @modelCode";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 cmd.Parameters.Add("@code", MySqlDbType.String).Value = model?.Code;
                 cmd.Parameters.Add("@modelCode", MySqlDbType.String).Value = modelCode;
@@ -305,6 +306,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -313,6 +315,7 @@ namespace AqbaServer.Data
         public static async Task<bool> UpdateEquipmentParameter(int equipmentParameterId, EquipmentParameter parameter)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -321,15 +324,12 @@ namespace AqbaServer.Data
                     "SET equipmentId = @equipmentId, kindParameterId = @kindParameterId, value = @value " +
                     "WHERE id  = @equipmentParameterId";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
-                cmd.Parameters.Add("@equipmentId", MySqlDbType.Int32).Value = parameter.Equipment.Id;
+                cmd.Parameters.Add("@equipmentId", MySqlDbType.Int32).Value = parameter?.Equipment?.Id;
                 cmd.Parameters.Add("@equipmentParameterId", MySqlDbType.Int32).Value = equipmentParameterId;
-                cmd.Parameters.Add("@kindParameterId", MySqlDbType.Int32).Value = parameter.KindParam.Id;
+                cmd.Parameters.Add("@kindParameterId", MySqlDbType.Int32).Value = parameter?.KindParam?.Id;
                 cmd.Parameters.Add("@value", MySqlDbType.String).Value = parameter?.Value;
 
                 await cmd.ExecuteNonQueryAsync();
@@ -343,6 +343,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -351,6 +352,7 @@ namespace AqbaServer.Data
         public static async Task<bool> UpdateEquipment(int equipmentId, Equipment equipment)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -359,11 +361,8 @@ namespace AqbaServer.Data
                     "SET id = @id, serial_number = @serial_number, inventory_number = @inventory_number, kindId = @kindId, manufacturerId = @manufacturerId, modelId = @modelId, companyId = @companyId, maintenanceEntitiesId = @maintenanceEntitiesId " +
                     "WHERE id = @eqipmentId";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = equipment.Id;
                 cmd.Parameters.Add("@eqipmentId", MySqlDbType.Int32).Value = equipmentId;
@@ -372,18 +371,8 @@ namespace AqbaServer.Data
                 cmd.Parameters.Add("@kindId", MySqlDbType.Int32).Value = equipment?.Equipment_kind?.Id;
                 cmd.Parameters.Add("@manufacturerId", MySqlDbType.Int32).Value = equipment?.Equipment_manufacturer?.Id;
                 cmd.Parameters.Add("@modelId", MySqlDbType.Int32).Value = equipment?.Equipment_model?.Id;
-                cmd.Parameters.Add("@companyId", MySqlDbType.Int32).Value = equipment?.Company?.Id;
-                cmd.Parameters.Add("@maintenanceEntitiesId", MySqlDbType.Int32).Value = equipment?.Maintenance_entity?.Id;
-
-                /*if (equipment != null && equipment.Parameters != null && equipment.Parameters.Count > 0)
-                {
-                    foreach (var param in equipment.Parameters)
-                    {
-                        param.Equipment = equipment;
-                        param.KindParam = equipment.Equipment_kind.Parameters;
-                        await UpdateEquipmentParameter(equipmentId, param);
-                    }
-                } */               
+                cmd.Parameters.Add("@companyId", MySqlDbType.Int32).Value = equipment?.Company?.Id == 0 ? null : equipment?.Company?.Id;
+                cmd.Parameters.Add("@maintenanceEntitiesId", MySqlDbType.Int32).Value = equipment?.Maintenance_entity?.Id == 0 ? null : equipment?.Maintenance_entity?.Id;            
 
                 await cmd.ExecuteNonQueryAsync();
 
@@ -396,6 +385,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -406,6 +396,7 @@ namespace AqbaServer.Data
             if (employee == null) return false;
 
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -414,8 +405,7 @@ namespace AqbaServer.Data
                     "SET id = @id, first_name = @first_name, last_name = @last_name, patronymic = @patronymic, position = @position, active = @active, email = @email, login = @login, phone = @phone " +
                     "WHERE id = @employeeId";
 
-                MySqlCommand cmd = connection.CreateCommand();
-
+                cmd.Connection = connection;
                 cmd.CommandText = sqlCommand;
 
                 cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = employee.Id;
@@ -440,6 +430,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -450,6 +441,7 @@ namespace AqbaServer.Data
             if (group == null) return false;
 
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -458,8 +450,7 @@ namespace AqbaServer.Data
                     "SET id = @id, name = @name, active = @active, description = @description " +
                     "WHERE id = @groupId";
 
-                MySqlCommand cmd = connection.CreateCommand();
-
+                cmd.Connection = connection;
                 cmd.CommandText = sqlCommand;
 
                 cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = group.Id;
@@ -479,6 +470,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -489,6 +481,7 @@ namespace AqbaServer.Data
             if (role == null) return false;
 
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -497,8 +490,7 @@ namespace AqbaServer.Data
                     "SET name = @name " +
                     "WHERE name = @roleName";
 
-                MySqlCommand cmd = connection.CreateCommand();
-
+                cmd.Connection = connection;
                 cmd.CommandText = sqlCommand;
 
                 cmd.Parameters.Add("@roleName", MySqlDbType.String).Value = roleName;
@@ -515,52 +507,7 @@ namespace AqbaServer.Data
             }
             finally
             {
-                await connection.CloseAsync();
-                await connection.DisposeAsync();
-            }
-        }
-
-        public static async Task<bool> UpdateEmployeePerformance(Employee employee, DateTime day)
-        {
-            if (employee == null) return false;
-
-            MySqlConnection connection = DBConfig.GetDBConnection();
-            try
-            {
-                await connection.OpenAsync();
-                string sqlCommand =
-                    "UPDATE employee_performance " +
-                    "SET solvedTasks = @solvedTasks, spentedTime = @spentedTime " +
-                    "WHERE date = @date AND employeeId = @employeeId";
-
-                MySqlCommand cmd = connection.CreateCommand();
-
-                cmd.CommandText = sqlCommand;
-
-                cmd.Parameters.Add("@date", MySqlDbType.Date).Value = day;
-                cmd.Parameters.Add("@employeeId", MySqlDbType.Int32).Value = employee?.Id;
-
-                if (employee?.SolvedTasks > 0)
-                    cmd.Parameters.Add("@solvedTasks", MySqlDbType.Int32).Value = employee?.SolvedTasks;
-                else
-                    cmd.Parameters.Add("@solvedTasks", MySqlDbType.Int32).Value = null;
-
-                if (employee?.SpentedTimeDouble > 0)
-                    cmd.Parameters.Add("@spentedTime", MySqlDbType.Double).Value = employee?.SpentedTimeDouble;
-                else
-                    cmd.Parameters.Add("@spentedTime", MySqlDbType.Double).Value = null;
-
-                await cmd.ExecuteNonQueryAsync();
-
-                return true;
-            }
-            catch (Exception e)
-            {
-                WriteLog.Error(e.ToString());
-                return false;
-            }
-            finally
-            {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -569,6 +516,7 @@ namespace AqbaServer.Data
         public static async Task<bool> UpdateRefreshToken(int userId, string refreshToken, DateTime expirationRefreshToken)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -577,11 +525,8 @@ namespace AqbaServer.Data
                     "SET refreshToken = @refreshToken, expirationRefreshToken = @expirationRefreshToken " +
                     "WHERE id = @userId";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 cmd.Parameters.Add("@userId", MySqlDbType.Int32).Value = userId;
                 cmd.Parameters.Add("@expirationRefreshToken", MySqlDbType.DateTime).Value = expirationRefreshToken;
@@ -598,6 +543,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -606,6 +552,7 @@ namespace AqbaServer.Data
         public static async Task<bool> UpdateUser(User userUpdate)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -614,11 +561,8 @@ namespace AqbaServer.Data
                     "SET email = @email, roleId = @roleId, passwordHash = @passwordHash, refreshToken = @refreshToken, expirationRefreshToken = @expirationRefreshToken, active = @active " +
                     "WHERE id = @userId";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 cmd.Parameters.Add("@userId", MySqlDbType.Int32).Value = userUpdate.Id;
                 cmd.Parameters.Add("@email", MySqlDbType.String).Value = userUpdate.Email;
@@ -652,6 +596,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -660,59 +605,33 @@ namespace AqbaServer.Data
         public static async Task<bool> UpdateIssue(Issue issue)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
                 string sqlCommand =
                     "UPDATE issue " +
-                    "SET id = @id, assignee_id = @assignee_id, author_id = @author_id, title = @title, internal_status = @internal_status, created_at = @created_at, completed_at = @completed_at, deadline_at = @deadline_at, delay_to = @delay_to, deleted_at = @deleted_at, statusId = @statusId, typeId = @typeId, priorityId = @priorityId, companyId = @companyId, service_objectId = @service_objectId " +
+                    "SET id = @id, assignee_id = @assignee_id, author_id = @author_id, title = @title, employees_updated_at = @employees_updated_at, created_at = @created_at, completed_at = @completed_at, deadline_at = @deadline_at, delay_to = @delay_to, deleted_at = @deleted_at, statusId = @statusId, typeId = @typeId, priorityId = @priorityId, companyId = @companyId, service_objectId = @service_objectId " +
                     "WHERE issue.id = @id";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
 
                 cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = issue.Id;
                 cmd.Parameters.Add("@assignee_id", MySqlDbType.Int32).Value = issue?.Assignee_id ?? null;
                 cmd.Parameters.Add("@author_id", MySqlDbType.Int32).Value = issue?.Author_id ?? null;
                 cmd.Parameters.Add("@title", MySqlDbType.String).Value = issue?.Title ?? null;
-                cmd.Parameters.Add("@internal_status", MySqlDbType.String).Value = issue?.Internal_status ?? null;
-
-                if (issue?.Created_at != null)
-                    cmd.Parameters.Add("@created_at", MySqlDbType.DateTime).Value = issue?.Created_at;
-                else cmd.Parameters.Add("@created_at", MySqlDbType.DateTime).Value = null;
-
-                if (issue?.Completed_at != null)
-                    cmd.Parameters.Add("@completed_at", MySqlDbType.DateTime).Value = issue?.Completed_at;
-                else cmd.Parameters.Add("@completed_at", MySqlDbType.DateTime).Value = null;
-
-                if (issue?.Deadline_at != null)
-                    cmd.Parameters.Add("@deadline_at", MySqlDbType.DateTime).Value = issue?.Deadline_at;
-                else cmd.Parameters.Add("@deadline_at", MySqlDbType.DateTime).Value = null;
-
-                if (issue?.Delay_to != null)
-                    cmd.Parameters.Add("@delay_to", MySqlDbType.DateTime).Value = issue?.Delay_to;
-                else cmd.Parameters.Add("@delay_to", MySqlDbType.DateTime).Value = null;
-
-                if (issue?.Deleted_at != null)
-                    cmd.Parameters.Add("@deleted_at", MySqlDbType.DateTime).Value = issue?.Deleted_at;
-                else cmd.Parameters.Add("@deleted_at", MySqlDbType.DateTime).Value = null;
-
+                cmd.Parameters.Add("@employees_updated_at", MySqlDbType.DateTime).Value = issue?.Employees_updated_at != null ? issue.Employees_updated_at : null;
+                cmd.Parameters.Add("@created_at", MySqlDbType.DateTime).Value = issue?.Created_at != null ? issue.Created_at : null;
+                cmd.Parameters.Add("@completed_at", MySqlDbType.DateTime).Value = issue?.Completed_at != null ? issue.Completed_at : null;
+                cmd.Parameters.Add("@deadline_at", MySqlDbType.DateTime).Value = issue?.Deadline_at != null ? issue.Deadline_at : null;
+                cmd.Parameters.Add("@delay_to", MySqlDbType.DateTime).Value = issue?.Delay_to != null ? issue.Delay_to : null;
+                cmd.Parameters.Add("@deleted_at", MySqlDbType.DateTime).Value = issue?.Deleted_at != null ? issue.Deleted_at : null;
                 cmd.Parameters.Add("@statusId", MySqlDbType.Int32).Value = issue?.Status?.Id ?? null;
                 cmd.Parameters.Add("@typeId", MySqlDbType.Int32).Value = issue?.Type?.Id ?? null;
                 cmd.Parameters.Add("@priorityId", MySqlDbType.Int32).Value = issue?.Priority?.Id ?? null;
-
-                if (issue?.Company != null && issue.Company.Id != 0)
-                    cmd.Parameters.Add("@companyId", MySqlDbType.Int32).Value = issue.Company.Id;
-                else
-                    cmd.Parameters.Add("@companyId", MySqlDbType.Int32).Value = null;
-
-                if (issue?.Service_object != null && issue.Service_object.Id != 0)
-                    cmd.Parameters.Add("@service_objectId", MySqlDbType.Int32).Value = issue.Service_object.Id;
-                else
-                    cmd.Parameters.Add("@service_objectId", MySqlDbType.Int32).Value = null;
+                cmd.Parameters.Add("@companyId", MySqlDbType.Int32).Value = issue?.Company?.Id != null && issue.Company.Id != 0 ? issue.Company.Id : null;
+                cmd.Parameters.Add("@service_objectId", MySqlDbType.Int32).Value = issue?.Service_object != null && issue.Service_object.Id != 0 ? issue.Service_object.Id : null;
 
                 await cmd.ExecuteNonQueryAsync();
 
@@ -726,14 +645,16 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
         }
 
-        public static async Task<bool> UpdateIssueType(TaskType type)
+        public static async Task<bool> UpdateIssueType(IssueType type)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -742,13 +663,9 @@ namespace AqbaServer.Data
                     "SET `name` = @name, `code` = @code, `default` = @default, `inner` = @inner, `available_for_client` = @available_for_client, `type` = @type " +
                     "WHERE code = @code";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
-
+                cmd.Connection = connection;
                 cmd.CommandText = sqlCommand;
+
                 // id нет потому что оно автоинкрементируемое
                 cmd.Parameters.Add("@name", MySqlDbType.String).Value = type?.Name;
                 cmd.Parameters.Add("@code", MySqlDbType.String).Value = type?.Code;
@@ -768,6 +685,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -776,6 +694,7 @@ namespace AqbaServer.Data
         public static async Task<bool> UpdateIssueStatus(Status status)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -784,13 +703,9 @@ namespace AqbaServer.Data
                     "SET name = @name, code = @code, color = @color " +
                     "WHERE code = @code";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
-
+                cmd.Connection = connection;
                 cmd.CommandText = sqlCommand;
+
                 // id нет потому что оно автоинкрементируемое
                 cmd.Parameters.Add("@name", MySqlDbType.String).Value = status?.Name;
                 cmd.Parameters.Add("@code", MySqlDbType.String).Value = status?.Code;
@@ -807,6 +722,7 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
@@ -815,6 +731,7 @@ namespace AqbaServer.Data
         public static async Task<bool> UpdateIssuePriority(Priority priority)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
@@ -823,17 +740,13 @@ namespace AqbaServer.Data
                     "SET name = @name, code = @code, position = @position, color = @color " +
                     "WHERE code = @code";
 
-                MySqlCommand cmd = new()
-                {
-                    Connection = connection,
-                    CommandText = sqlCommand
-                };
-
+                cmd.Connection = connection;
                 cmd.CommandText = sqlCommand;
+
                 // id нет потому что оно автоинкрементируемое
                 cmd.Parameters.Add("@name", MySqlDbType.String).Value = priority?.Name;
                 cmd.Parameters.Add("@code", MySqlDbType.String).Value = priority?.Code;
-                cmd.Parameters.Add("@position", MySqlDbType.Int32).Value = priority?.Position;
+                cmd.Parameters.Add("@position", MySqlDbType.Int32).Value = priority?.Position == 0 ? null : priority?.Position;
                 cmd.Parameters.Add("@color", MySqlDbType.String).Value = priority?.Color;
 
                 await cmd.ExecuteNonQueryAsync();
@@ -847,6 +760,45 @@ namespace AqbaServer.Data
             }
             finally
             {
+                await cmd.DisposeAsync();
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<bool> UpdateTimeEntry(TimeEntry timeEntry)
+        {
+            MySqlConnection connection = DBConfig.GetDBConnection();
+            MySqlCommand cmd = connection.CreateCommand();
+            try
+            {
+                await connection.OpenAsync();
+                string sqlCommand =
+                    "UPDATE time_entry " +
+                    "SET id = @id, employeeId = @employeeId, spentTime = @spentTime, issueId = @issueId, logged_at = @logged_at " +
+                    "WHERE id = @id";
+
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
+
+                cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = timeEntry.Id;
+                cmd.Parameters.Add("@employeeId", MySqlDbType.Int32).Value = timeEntry.Employee?.Id;
+                cmd.Parameters.Add("@spentTime", MySqlDbType.Double).Value = timeEntry.Spent_Time;
+                cmd.Parameters.Add("@issueId", MySqlDbType.Int32).Value = timeEntry.Issue_id;
+                cmd.Parameters.Add("@logged_at", MySqlDbType.DateTime).Value = timeEntry.Logged_At;
+
+                await cmd.ExecuteNonQueryAsync();
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return false;
+            }
+            finally
+            {
+                await cmd.DisposeAsync();
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }

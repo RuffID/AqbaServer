@@ -1,4 +1,4 @@
-﻿using AqbaServer.Data;
+﻿using AqbaServer.Data.MySql;
 using AqbaServer.Interfaces.OkdeskPerformance;
 
 namespace AqbaServer.Repository.OkdeskPerformance

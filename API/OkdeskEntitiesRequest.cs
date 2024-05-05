@@ -15,7 +15,7 @@ namespace AqbaServer.API
                 while (true)
                 {
                     // Получение списка компаний через API
-                    response = await Request.GetСompanies(lastCompanyId, Convert.ToInt32(category.Id), pageSize);
+                    response = await Request.GetСompanies(lastCompanyId, category.Id, pageSize);
 
                     // Если список компаний не пуст, то находит id последнего клиента чтобы в следующей итерации получить следующие 100 компаний
                     if (response?.Length > 0)
@@ -28,10 +28,7 @@ namespace AqbaServer.API
                     {
                         // Если получен не пустой список, то добавляет поочерёдно каждую компанию в список
                         foreach (var company in response)
-                        {
-                            company.Category = category;
                             companies.Add(company);
-                        }
 
                         // Если в ответе получено меньше максимального количества компаний то завершает цикл, чтобы не посылать лишний запрос
                         if (response.Length < pageSize)
@@ -43,7 +40,7 @@ namespace AqbaServer.API
             return companies;
         }
 
-        public static async Task<ICollection<MaintenanceEntity>> GetMaintenanceEntities(int pageSize, int lastMaintenanceEntitiesId = 0)
+        public static async Task<ICollection<MaintenanceEntity>> GetMaintenanceEntities(int pageSize = 100, int lastMaintenanceEntitiesId = 0, int companyId = 0)
         {
             List<MaintenanceEntity> maintenanceEntities = [];
             MaintenanceEntity[]? response;
@@ -53,10 +50,9 @@ namespace AqbaServer.API
                 if (maintenanceEntities.Count > 0)
                     lastMaintenanceEntitiesId = maintenanceEntities[^1].Id + 1;
 
-                response = await Request.GetMaintenanceEntities(lastMaintenanceEntitiesId, pageSize);
+                response = await Request.GetMaintenanceEntities(lastMaintenanceEntitiesId, pageSize, companyId);
 
-                if (response == null || response.Length <= 0)
-                    break;
+                if (response == null || response.Length <= 0) break;
                 else
                     foreach (var obj in response)
                         maintenanceEntities.Add(obj);
@@ -66,9 +62,8 @@ namespace AqbaServer.API
             return maintenanceEntities;
         }
 
-        public static async Task<ICollection<Equipment>> GetEquipments(int equipmentId = 0, int pageSize = 100)
+        public static async Task<ICollection<Equipment>> GetEquipments(int equipmentId = 0, int pageSize = 100, int maintenanceEntityId = 0, int companyId = 0)
         {
-
             List<Equipment> equipments = [];
             Equipment[]? responseEquipment;
             int counter = 0;
@@ -78,16 +73,14 @@ namespace AqbaServer.API
                 if (equipments.Count > 0)
                     equipmentId = equipments[^1].Id + 1;
 
-                responseEquipment = await Request.GetEquipments(equipmentId, pageSize);
+                responseEquipment = await Request.GetEquipments(equipmentId, pageSize, maintenanceEntityId, companyId);
 
-                if (responseEquipment == null || responseEquipment.Length <= 0)
-                    break;
+                if (responseEquipment == null || responseEquipment.Length <= 0) break;
                 else
                     foreach (var equip in responseEquipment)
                         equipments.Add(equip);
 
-                if (pageSize >= ++counter)
-                    break;
+                if (pageSize >= ++counter) break;
             }
             return equipments;
         }
@@ -159,28 +152,7 @@ namespace AqbaServer.API
                         kinds.Add(equip);
             }
             return kinds;
-        }
-
-        public static ICollection<Category> GetCategories()
-        {
-            ICollection<Category> categories =
-            [
-                new(0, "#FFFFFF"),
-                new(1, "#FFEE00"),
-                new(2, "#00FF00"),
-                new(3, "#FF0000"),
-                new(4, "#FF00D5"),
-                new(5, "#000000"),
-                new(6, "#5CB85C"),
-                new(7, "#D3F720"),
-                new(8, "#6C89EB"),
-                new(9, "#08C7F7"),
-                new(10, "#0011FF"),
-                new(11, "#9E9E9E"),
-                new(12, "#FF7300")
-            ];
-            return categories;
-        }
+        }        
 
         public static async Task<ICollection<Employee>> GetEmployees()
         {

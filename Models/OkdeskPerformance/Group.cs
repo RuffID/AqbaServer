@@ -15,7 +15,7 @@ namespace AqbaServer.Models.OkdeskReport
 
         public Group()
         {
-            Employees = new List<Employee>();
+            Employees = [];
             EmployeesId = [];
         }
     }

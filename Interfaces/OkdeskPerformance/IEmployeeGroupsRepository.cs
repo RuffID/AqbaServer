@@ -2,7 +2,8 @@
 {
     public interface IEmployeeGroupsRepository
     {
-        Task<bool> GetEmployeeGroup(int employeeId, int groupId);
-        Task<bool> CreateEmployeeGroup(int employeeId, int groupId);
+        Task<bool> GetEmployeeGroup(int id);
+        Task<bool> CreateEmployeeGroup(int id, int employeeId, int groupId);
+        Task<bool> UpdateEmployeeGroupsFromDBOkdesk();
     }
 }

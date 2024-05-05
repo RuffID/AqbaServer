@@ -19,7 +19,9 @@ namespace AqbaServer.Helper
         [JsonProperty]
         public static string PartnersPassword { get; set; } = string.Empty;
         [JsonProperty]
-        public static string ConnectionString { get; set; } = "Server=localhost;Database=test;port=3306;UserId=root;Password=12345";
+        public static string ConnectionString { get; set; } = string.Empty;
+        [JsonProperty]
+        public static string ODBCConnectionString { get; set; } = string.Empty;
         [JsonProperty]
         public static string JwtKey { get; set; } = string.Empty;
         [JsonProperty]
@@ -48,6 +50,7 @@ namespace AqbaServer.Helper
             PartnersLogin = configuration[nameof(PartnersLogin)] ?? string.Empty;
             PartnersPassword = configuration[nameof(PartnersPassword)] ?? string.Empty;
             ConnectionString = configuration[nameof(ConnectionString)] ?? string.Empty;
+            ODBCConnectionString = configuration[nameof(ODBCConnectionString)] ?? string.Empty;
             JwtKey = configuration[nameof(JwtKey)] ?? string.Empty;
             TokenLifeTimeFromMinutes = Convert.ToInt32(configuration[nameof(TokenLifeTimeFromMinutes)]);
             RefreshTokenLifeTimeFromDays = Convert.ToInt32(configuration[nameof(RefreshTokenLifeTimeFromDays)]);
@@ -69,43 +72,6 @@ namespace AqbaServer.Helper
                 }
             }
             catch (Exception ex) { WriteLog.Error(ex.Message); }
-        }
-
-        public static async void CreateConfig(ConfigDto config, bool update)
-        {
-            try
-            {
-                if (!File.Exists(Path) || update == true)
-                {
-                    if (!Directory.Exists("Config"))
-                        Directory.CreateDirectory("Config");
-
-                    string json = JsonConvert.SerializeObject(config, Formatting.Indented);
-                    await File.WriteAllTextAsync(Path, json, Encoding.UTF8);
-                }
-            }
-            catch (Exception ex) { WriteLog.Error(ex.Message); }
-        }
-
-        public static ConfigDto? ReadConfig()
-        {
-            try
-            {
-                ConfigDto? readConf = null;
-
-                if (!File.Exists(Path))
-                    return null;
-
-                string configString = File.ReadAllText(Path);
-                if (!string.IsNullOrEmpty(configString))
-                    readConf = JsonConvert.DeserializeObject<ConfigDto>(configString);
-
-                if (readConf == null || (string.IsNullOrEmpty(configString) || configString == "[]"))
-                    WriteLog.Error("Failed to read config");
-                return readConf;
-
-            }
-            catch (Exception ex) { WriteLog.Error(ex.ToString()); return null; }
-        }
+        }        
     }
 }

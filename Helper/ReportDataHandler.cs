@@ -3,7 +3,7 @@ using AqbaServer.Models.OkdeskPerformance;
 
 namespace AqbaServer.Helper
 {
-    internal static partial class ReportDataHandler
+    /*internal static partial class ReportDataHandler
     {
         // Шаблон Фамилии + имени для страницы с заявками, парсятся несколько символов впереди чтобы получить именно ФИО, а не "Решено заявок" например
         // Пример строки: <span>Карпенко Алексей Сергеевич - для страницы с решёнными заявками
@@ -51,7 +51,10 @@ namespace AqbaServer.Helper
         static MatchCollection? matchesPagesTaskCount;   // Число страниц с решёнными заявками
         static MatchCollection? matchesPagesTimeCount;   // Число страниц со списанным временем
 
-        public static void GetEmployeesResults(string? rawData, List<Employee> employees)  // Вызывает метод по поиску данных со странички
+        static List<Employee>? employeesWithTheSameLastName;    // Список найденных сотрудников
+
+
+        public static void GetEmployeesResults(string? rawData, ICollection<Employee> employees)  // Вызывает метод по поиску данных со странички
         {
             if (string.IsNullOrEmpty(rawData))
             {
@@ -71,73 +74,56 @@ namespace AqbaServer.Helper
             }
         }
 
-        static void SaveReportResults(string rawData, List<Employee> employees) // Поиск и запись данных в класс
+        static void SaveReportResults(string rawData, ICollection<Employee> employees) // Поиск и запись данных в класс
         {
-            if (matchesEmployees == null || matchesEmployees.Count > 0) return;  // Если не найден ни один сотрудник, то завершает метод
-
-            for (int i = 0; i < matchesEmployees.Count; i++)    // Проход по всем сотрудником и запись данных
+            List<Employee> employesList = employees.ToList();
+            if (matchesEmployees?.Count > 0)  // Если найден хотя бы один сотрудник, то записываем данные
             {
-                try
+                for (int i = 0; i < matchesEmployees.Count; i++)    // Проход по всем сотрудником и запись данных
                 {
-                    List<Employee>? employeesWithTheSameLastName;    // Список найденных сотрудников
-                                                                     // Находит всех сотрудников с совпадением по фамилии и записывает в list
-                    employeesWithTheSameLastName = employees?.FindAll(x => x.Last_name.Contains(matchesEmployees[i].Groups[1].ToString()));
-
-                    for (int j = 0; j < employeesWithTheSameLastName?.Count; j++)    // Проходит по списку найденных сотрудников по фамилии
+                    try
                     {
-                        // Сравнивает имя и если оно совпадает со списком в базе, то сохраняет значение,
-                        // нужно для моментов, когда есть сотрудники с похожими фамилиями
-                        Employee? currentEmployee;
-                        // Находит по совпадению в имени чтобы не было ошибочных присваиваний и записывает ссылку на сотрудника
-                        currentEmployee = employeesWithTheSameLastName.Find(x => x.First_name.Contains(matchesEmployees[i].Groups[2].ToString()));
+                        employeesWithTheSameLastName?.Clear();
+                        // Находит всех сотрудников с совпадением по фамилии и записывает в list
+                        employeesWithTheSameLastName = employesList.FindAll(x => x.Last_name.Contains(matchesEmployees[i].Groups[1].ToString()));
 
-                        if (currentEmployee == null) return;
-
-                        if (matchesValues == null || matchesValues.Count == 0) continue;
-                        // Если на страничке есть совпадения по решённым задачам, то записывает их в сотрудника
-                        if (NumberOfSolvedTasksRegex().IsMatch(matchesValues[i].ToString()))
+                        for (int j = 0; j < employeesWithTheSameLastName.Count; j++)    // Проходит по списку найденных сотрудников по фамилии
                         {
-                            // Если эта первая страница, то сохраняет количество страниц в отчёте
-                            SaveCountPage(currentTaskPage, TaskCurrentPageRegex(), PagesCountPerReportTaskPageRegex(), ref matchesPagesTaskCount, rawData);
-                            currentEmployee.SolvedTasks = Convert.ToInt32(matchesValues[i].Groups[1].ToString());
-                            break;
-                        }
-                        // Если на страничке есть совпадения по списанному времени, то записывает их в сотрудника
-                        else if (AmountOfTimeWrittenOfRegex().IsMatch(matchesValues[i].ToString()))
-                        {
-                            SaveCountPage(currentTimePage, TimeCurrentPageRegex(), PagesCountPerReportTimePageRegex(), ref matchesPagesTimeCount, rawData);
+                            // Сравнивает имя и если оно совпадает со списком в базе, то сохраняет значение,
+                            // нужно для моментов, когда есть сотрудники с похожими фамилиями
+                            Employee? currentEmployee;
+                            // Находит по совпадению в имени чтобы не было ошибочных присваиваний и записывает ссылку на сотрудника
+                            currentEmployee = employeesWithTheSameLastName.Find(x => x.First_name.Contains(matchesEmployees[i].Groups[2].ToString()));
 
-                            if (matchesValues?.Count < i || matchesValues?[i] == null) break;
-                            string tempH = string.Empty;
-                            string tempM = string.Empty;
-
-                            if (matchesValues[i].Groups.Count > 0)
-                                tempH = matchesValues[i].Groups[1].ToString();
-
-                            if (matchesValues[i].Groups.Count > 1)
-                                tempM = matchesValues[i].Groups[2].ToString();
-
-                            int spentedHours = 0;
-                            int spentedMinutes = 0;
-
-                            if (!string.IsNullOrEmpty(tempH))
-                                spentedHours = Convert.ToInt32(tempH);
-
-                            if (!string.IsNullOrEmpty(tempM))
-                                spentedMinutes = Convert.ToInt32(tempM);
-
-                            if (spentedHours > 0 || spentedMinutes > 0)
-                                currentEmployee.SpentedTimeDouble = spentedHours + ((double)spentedMinutes / 60);
-
-                            break;
+                            if (currentEmployee != null)
+                            {
+                                // Если на страничке есть совпадения по решённым задачам, то записывает их в сотрудника
+                                if (NumberOfSolvedTasksRegex().IsMatch(matchesValues[i].ToString()))
+                                {
+                                    // Если эта первая страница, то сохраняет количество страниц в отчёте
+                                    SaveCountPage(currentTaskPage, TaskCurrentPageRegex(), PagesCountPerReportTaskPageRegex(), ref matchesPagesTaskCount, rawData);
+                                    currentEmployee.SolvedTasks = Convert.ToInt32(matchesValues[i].Groups[1].ToString());
+                                    break;
+                                }
+                                // Если на страничке есть совпадения по списанному времени, то записывает их в сотрудника
+                                else if (AmountOfTimeWrittenOfRegex().IsMatch(matchesValues[i].ToString()))
+                                {
+                                    SaveCountPage(currentTimePage, TimeCurrentPageRegex(), PagesCountPerReportTimePageRegex(), ref matchesPagesTimeCount, rawData);
+                                    var spentedHours = Convert.ToInt32(matchesValues[i].Groups[1].ToString());
+                                    var spentedMinutes = Convert.ToInt32(matchesValues[i].Groups[2].ToString());
+                                    currentEmployee.SpentedTimeDouble = spentedHours + ((double)spentedMinutes / 60);
+                                    break;
+                                }
+                            }
                         }
                     }
-                }
-                catch (Exception e)
-                {
-                    WriteLog.Error(e.ToString());
+                    catch (Exception e)
+                    {
+                        WriteLog.Error(e.ToString());
+                    }
                 }
             }
+
         }
 
         static void SaveCountPage(Match currentPage, Regex regexPageCurrent, Regex regexPagesCountPerReportPage, ref MatchCollection matchesPagesCount, string rawData)
@@ -187,6 +173,6 @@ namespace AqbaServer.Helper
             }
         }
 
-        
-    }
+
+    }*/
 }

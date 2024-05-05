@@ -1,5 +1,5 @@
 ﻿using AqbaServer.API;
-using AqbaServer.Data;
+using AqbaServer.Data.MySql;
 using AqbaServer.Helper;
 using AqbaServer.Interfaces.OkdeskPerformance;
 using AqbaServer.Models.OkdeskReport;
@@ -8,18 +8,24 @@ namespace AqbaServer.Repository.OkdeskPerformance
 {
     public class RoleRepository : IRoleRepository
     {
-        public async Task<Role?> GetRole(Role role)
+        public async Task<Role?> GetRole(Role? role)
         {
+            if (role == null) return null;
+
             return await DBSelect.SelectRole(role?.Name);
         }
 
-        public async Task<bool> CreateRole(Role role)
+        public async Task<bool> CreateRole(Role? role)
         {
+            if (role == null) return false;
+
             return await DBInsert.InsertRole(role);
         }
 
-        public async Task<bool> UpdateRole(string roleName, Role role)
+        public async Task<bool> UpdateRole(string? roleName, Role? role)
         {
+            if (string.IsNullOrEmpty(roleName) || role == null) return false;
+
             return await DBUpdate.UpdateRole(roleName, role);
         }
 
@@ -43,7 +49,7 @@ namespace AqbaServer.Repository.OkdeskPerformance
                 }
                 else if (tempRole != null)
                 {
-                    if (!await UpdateRole(tempRole.Name, role))
+                    if (!await UpdateRole(tempRole?.Name, role))
                         return false;
                 }
             }

@@ -5,6 +5,7 @@ using AqbaServer.Models.OkdeskPerformance;
 using AqbaServer.Interfaces.OkdeskEntities;
 using Microsoft.AspNetCore.Authorization;
 using AqbaServer.Models.Authorization;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace AqbaServer.Controllers.OkdeskEntities
 {
@@ -45,7 +46,7 @@ namespace AqbaServer.Controllers.OkdeskEntities
         [ProducesResponseType(400)]
         public async Task<IActionResult> GetCompany([FromQuery] int companyId)
         {
-            if (!await _companyRepository.GetCompanyFromOkdesk(companyId))
+            if (!await _companyRepository.UpdateCompanyFromOkdesk(companyId))
             {
                 ModelState.AddModelError("", "Something went wrong when retrieving company from okdesk");
                 return StatusCode(500, ModelState);
@@ -63,12 +64,36 @@ namespace AqbaServer.Controllers.OkdeskEntities
             return Ok(company);
         }
 
+        [HttpGet("update_company")]
+        [ProducesResponseType(200, Type = typeof(Models.OkdeskEntities.UpdateInformation))]
+        [ProducesResponseType(400)]
+        public async Task<IActionResult> UpdateCompanyDirectories([FromQuery] int companyId)
+        {
+            var (company, objects, equipments) = await _companyRepository.GetUpdatingCompany(companyId);
+
+            if (company == null || objects == null || equipments == null)
+                return NotFound("Не удалось обновить информацию по компании");
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            Models.OkdeskEntities.UpdateInformation? directory = new();
+            directory.Company = company;
+            directory.MaintenanceEntity = objects;
+
+            var equipmentDto = _mapper.Map<ICollection<EquipmentDto>>(equipments);
+
+            directory.Equipments = equipmentDto;
+
+            return Ok(directory);
+        }
+
         [HttpGet("okdesk"), Authorize(Roles = UserRole.Admin)]
         [ProducesResponseType(500)]
         [ProducesResponseType(200)]
         public async Task<IActionResult> GetCompaniesFromOkdesk()
         {
-            if (!await _companyRepository.GetCompaniesFromOkdesk())
+            if (!await _companyRepository.UpdateCompaniesFromAPIOkdesk())
             {
                 ModelState.AddModelError("", "Something went wrong when retrieving companies from okdesk");
                 return StatusCode(500, ModelState);
@@ -77,10 +102,21 @@ namespace AqbaServer.Controllers.OkdeskEntities
             return Ok();
         }
 
+        [HttpGet("okdeskDB")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(500)]
+        public async Task<IActionResult> GetCompaniesFromDBOkdesk()
+        {
+            if (await _companyRepository.UpdateCompaniesFromDBOkdesk() == false)
+                return StatusCode(500, "Внутренняя ошибка при получении компаний из БД окдеска");
+
+            return Ok("Компании успешно обновлены");
+        }
+
         [HttpPost, Authorize(Roles = UserRole.Admin)]
         [ProducesResponseType(204)]
         [ProducesResponseType(400)]
-        public async Task<IActionResult> CreateCompany([FromQuery] int categoryId, [FromBody] CompanyDto companyCreate)
+        public async Task<IActionResult> CreateCompany([FromQuery] string categoryCode, [FromBody] CompanyDto companyCreate)
         {
             if (companyCreate == null)
                 return BadRequest(ModelState);
@@ -93,7 +129,7 @@ namespace AqbaServer.Controllers.OkdeskEntities
                 return StatusCode(422, ModelState);
             }
 
-            var category = _categoryRepository.GetCategory(categoryId);
+            var category = _categoryRepository.GetCategory(categoryCode);
 
             if (category == null)
                 return NotFound();
@@ -103,7 +139,7 @@ namespace AqbaServer.Controllers.OkdeskEntities
 
             var companyMap = _mapper.Map<Company>(companyCreate);
 
-            if (!await _companyRepository.CreateCompany(categoryId, companyMap))
+            if (!await _companyRepository.CreateCompany(categoryCode, companyMap))
             {
                 ModelState.AddModelError("", "Something went wrong while saving company");
                 return StatusCode(500, ModelState);
@@ -116,7 +152,7 @@ namespace AqbaServer.Controllers.OkdeskEntities
         [ProducesResponseType(400)]
         [ProducesResponseType(204)]
         [ProducesResponseType(404)]
-        public async Task<IActionResult> UpdateCompany([FromQuery] int companyId, [FromQuery] int categoryId, [FromBody] CompanyDto updatedCompany)
+        public async Task<IActionResult> UpdateCompany([FromQuery] int companyId, [FromQuery] string categoryCode, [FromBody] CompanyDto updatedCompany)
         {
             if (updatedCompany == null)
                 return BadRequest(ModelState);
@@ -124,7 +160,7 @@ namespace AqbaServer.Controllers.OkdeskEntities
             if (await _companyRepository.GetCompany(companyId) == null)
                 return NotFound();
 
-            var category = await _categoryRepository.GetCategory(categoryId);
+            var category = await _categoryRepository.GetCategory(categoryCode);
 
             if (category == null)
                 return NotFound();

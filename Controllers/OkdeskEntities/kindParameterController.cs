@@ -5,6 +5,7 @@ using AqbaServer.Models.OkdeskPerformance;
 using AqbaServer.Interfaces.OkdeskEntities;
 using Microsoft.AspNetCore.Authorization;
 using AqbaServer.Models.Authorization;
+using AqbaServer.Repository.OkdeskEntities;
 
 namespace AqbaServer.Controllers.OkdeskEntities
 {
@@ -54,61 +55,27 @@ namespace AqbaServer.Controllers.OkdeskEntities
             return Ok(kindParameter);
         }
 
-        /*[HttpPost]
-        [ProducesResponseType(204)]
-        [ProducesResponseType(400)]
-        public async Task<IActionResult> CreateKindParameter([FromQuery] int kindId, [FromBody] KindParameterDto kindParameterCreate)
+        [HttpGet("okdesk"), Authorize(Roles = UserRole.Admin)]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(500)]
+        public async Task<IActionResult> GetKindsFromAPIOkdesk()
         {
-            if (kindParameterCreate == null)
-                return BadRequest(ModelState);
+            if (await _kindParameterRepository.UpdateKindParametersFromAPIOkdesk() == false)
+                return StatusCode(500, "Внутренняя ошибка при получении kinds parameters из API окдеска");
 
-            var kindParameter = await _kindParameterRepository.GetKindParameter(kindParameterCreate.Name);
+            return Ok("Kinds parameters успешно обновлены");
+        }
 
-            if (kindParameter != null)
-            {
-                ModelState.AddModelError("", "Kind parameter already exists");
-                return StatusCode(422, ModelState);
-            }
-
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var kindParameterMap = _mapper.Map<KindParameter>(kindParameterCreate);
-
-            if (!await _kindParameterRepository.CreateKindParameter(kindId, kindParameterMap))
-            {
-                ModelState.AddModelError("", "Something went wrong while saving kind parameter");
-                return StatusCode(500, ModelState);
-            }
-
-            return Ok("Successfully created");
-        }*/
-
-        /*[HttpPut("{kindParameterCode}")]
-        [ProducesResponseType(400)]
-        [ProducesResponseType(204)]
-        [ProducesResponseType(404)]
-        public async Task<IActionResult> UpdateKindParameter([FromQuery] int kindId, [FromQuery] string kindParameterCode, [FromBody] KindParameterDto updatedKindParameter)
+        [HttpGet("okdeskDB"), Authorize(Roles = UserRole.Admin)]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(500)]
+        public async Task<IActionResult> GetKindsFromDBOkdesk()
         {
-            if(updatedKindParameter == null)
-                return BadRequest(ModelState);
+            if (await _kindParameterRepository.UpdateKindParametersFromDBOkdesk() == false)
+                return StatusCode(500, "Внутренняя ошибка при получении kinds parameters из БД окдеска");
 
-            if(await _kindParameterRepository.GetKindParameter(kindParameterCode) == null)
-                return NotFound();
-
-            if (!ModelState.IsValid)
-                return BadRequest();
-
-            var kindParameterMap = _mapper.Map<KindParameter>(updatedKindParameter);
-
-            if (! await _kindParameterRepository.UpdateKindParameter(kindId, kindParameterCode, kindParameterMap))
-            {
-                ModelState.AddModelError("", "Something went wrong updating kind parameter");
-                return StatusCode(500, ModelState);
-            }
-
-            return NoContent();
-        }*/
+            return Ok("Kinds parameters успешно обновлены");
+        }
 
         [HttpDelete, Authorize(Roles = UserRole.Admin)]
         [ProducesResponseType(400)]

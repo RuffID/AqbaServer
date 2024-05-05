@@ -5,6 +5,7 @@ using System.Text;
 using AqbaServer.Helper;
 using AqbaServer.Models.OkdeskReport;
 using AqbaServer.Dto;
+using System.ComponentModel.Design;
 
 namespace AqbaServer.API
 {
@@ -30,7 +31,7 @@ namespace AqbaServer.API
             };
         }
 
-        public static async Task<Company[]?> GetСompanies(int lastCompanyId, long companyCategoryId, int pageSize = 100)
+        public static async Task<Company[]?> GetСompanies(int lastCompanyId, int companyCategoryId, int pageSize = 100)
         {
             string link = $"{Immutable.OkdeskApiLink}/companies/list?api_token={Config.OkdeskApiToken}&page[from_id]={lastCompanyId}&page[direction]=forward&category_ids[]={companyCategoryId}&page[size]={pageSize}";
             var response = await SendApiRequest(link);
@@ -66,36 +67,50 @@ namespace AqbaServer.API
             }
         }
 
-        public static async Task<MaintenanceEntity[]?> GetMaintenanceEntities(int lastMaintenanceEntitiesId, int pageSize = 100)
+        public static async Task<MaintenanceEntity[]?> GetMaintenanceEntities(int lastMaintenanceEntitiesId, int pageSize = 100, int companyId = 0)
         {
             string link = $"{Immutable.OkdeskApiLink}/maintenance_entities/list?api_token={Config.OkdeskApiToken}&page[from_id]={lastMaintenanceEntitiesId}&page[direction]=forward&page[size]={pageSize}";
+
+            if (companyId > 0) link += $"&company_ids[]={companyId}";
+
             var response = await SendApiRequest(link);
-            if (string.IsNullOrEmpty(response) || response == "[]")
-                return null;
+            if (string.IsNullOrEmpty(response) || response == "[]") return null;
+
             try
             {
-
                 return JsonConvert.DeserializeObject<MaintenanceEntity[]>(response);
             }
-            catch (Exception e)
-            {
-                WriteLog.Error(e.ToString());
-                return null;
-            }
-
+            catch (Exception e) { WriteLog.Error(e.ToString()); return null; }
         }
 
-        public static async Task<Equipment[]?> GetEquipments(int lastEquipmentId, int pageSize = 100)
+        public static async Task<Equipment[]?> GetEquipments(int lastEquipmentId, int pageSize = 100, int maintenanceEntityId = 0, int companyId = 0)
         {
-            string link = $"{Immutable.OkdeskApiLink}/equipments/list/?api_token={Config.OkdeskApiToken}&page[direction]=forward&page[from_id]={lastEquipmentId}&page[size]={pageSize}";
+            string link = $"{Immutable.OkdeskApiLink}/equipments/list?api_token={Config.OkdeskApiToken}&page[direction]=forward&page[from_id]={lastEquipmentId}&page[size]={pageSize}";
+
+            if (companyId > 0) link += $"&company_ids[]={companyId}";
+
+            if (maintenanceEntityId > 0) link += $"&maintenance_entity_ids[]={maintenanceEntityId}";
+
+            var response = await SendApiRequest(link);
+            if (string.IsNullOrEmpty(response) || response == "[]") return null;
+
+            try
+            {
+                return JsonConvert.DeserializeObject<Equipment[]>(response);
+            }
+            catch (Exception e) { WriteLog.Error(e.ToString()); return null; }
+        }
+
+        public static async Task<KindParameter[]?> GetKindParameters()
+        {
+            string link = $"{Immutable.OkdeskApiLink}/equipments/parameters?api_token={Config.OkdeskApiToken}";
             var response = await SendApiRequest(link);
             if (string.IsNullOrEmpty(response) || response == "[]")
                 return null;
+
             try
             {
-                if (response == null || response == string.Empty)
-                    return null;
-                return JsonConvert.DeserializeObject<Equipment[]>(response);
+                return JsonConvert.DeserializeObject<KindParameter[]>(response);
             }
             catch (Exception e)
             {
@@ -107,14 +122,13 @@ namespace AqbaServer.API
 
         public static async Task<Manufacturer[]?> GetManufacturers(long lastManufacturerId)
         {
-            string link = $"{Immutable.OkdeskApiLink}/equipments/manufacturers/?api_token={Config.OkdeskApiToken}&page[direction]=forward&page[from_id]={lastManufacturerId}";
+            string link = $"{Immutable.OkdeskApiLink}/equipments/manufacturers?api_token={Config.OkdeskApiToken}&page[direction]=forward&page[from_id]={lastManufacturerId}";
             var response = await SendApiRequest(link);
             if (string.IsNullOrEmpty(response) || response == "[]")
                 return null;
+
             try
             {
-                if (response == null || response == string.Empty)
-                    return null;
                 return JsonConvert.DeserializeObject<Manufacturer[]>(response);
             }
             catch (Exception e)
@@ -127,14 +141,13 @@ namespace AqbaServer.API
 
         public static async Task<Kind[]?> GetKinds(long lastKindId)
         {
-            string link = $"{Immutable.OkdeskApiLink}/equipments/kinds/?api_token={Config.OkdeskApiToken}&page[direction]=forward&page[from_id]={lastKindId}";
+            string link = $"{Immutable.OkdeskApiLink}/equipments/kinds?api_token={Config.OkdeskApiToken}&page[direction]=forward&page[from_id]={lastKindId}";
             var response = await SendApiRequest(link);
             if (string.IsNullOrEmpty(response) || response == "[]")
                 return null;
+
             try
             {
-                if (response == null || response == string.Empty)
-                    return null;
                 return JsonConvert.DeserializeObject<Kind[]>(response);
             }
             catch (Exception e)
@@ -147,14 +160,13 @@ namespace AqbaServer.API
 
         public static async Task<Model[]?> GetModels(long lastModelId)
         {
-            string link = $"{Immutable.OkdeskApiLink}/equipments/models/?api_token={Config.OkdeskApiToken}&page[direction]=forward&page[from_id]={lastModelId}";
+            string link = $"{Immutable.OkdeskApiLink}/equipments/models?api_token={Config.OkdeskApiToken}&page[direction]=forward&page[from_id]={lastModelId}";
             var response = await SendApiRequest(link);
             if (string.IsNullOrEmpty(response) || response == "[]")
                 return null;
+
             try
             {
-                if (response == null || response == string.Empty)
-                    return null;
                 return JsonConvert.DeserializeObject<Model[]>(response);
             }
             catch (Exception e)
@@ -162,69 +174,74 @@ namespace AqbaServer.API
                 WriteLog.Error(e.ToString());
                 return null;
             }
-
         }
 
         public static async Task<Employee[]?> GetEmployees(long lastEmployeeId)  // Получение списка сотрудников
         {
-            string link = $"{Immutable.OkdeskApiLink}/employees/list/?api_token={Config.OkdeskApiToken}&page[direction]=forward&page[from_id]={lastEmployeeId}";
-            Employee[]? employees = Array.Empty<Employee>();
+            string link = $"{Immutable.OkdeskApiLink}/employees/list?api_token={Config.OkdeskApiToken}&page[direction]=forward&page[from_id]={lastEmployeeId}";
             var response = await SendApiRequest(link);
 
             if (string.IsNullOrEmpty(response) || response == "[]")
                 return null;
+
             try
             {
-                employees = JsonConvert.DeserializeObject<Employee[]>(response);
+                return JsonConvert.DeserializeObject<Employee[]>(response);
             }
-            catch (Exception e) { WriteLog.Error(e.ToString()); }
-
-            if (employees != null && employees.Length > 0)
-                return employees;
-
-            return null;
-
+            catch (Exception e) { WriteLog.Error(e.ToString()); return null; }
         }
 
-        /*public static async Task<bool> GetReportSolvedTasks(List<Employee> employees, DateTime dateFrom, DateTime dateTo)    // Получение списка открытых заявок
+        public static async Task<ICollection<Issue>?> GetUpdatedIssues(DateTime updatedSince, DateTime updatedUntil, int assigneeId)
         {
-            StringBuilder linkSolvedTasks = new();
-            int[]? numberOfSolvedTask;
+            ICollection<Issue> issues = [];
+            StringBuilder linkOpenTasks = new();
+            int pageNumber = 1;
 
-            foreach (var employee in employees)
+            while (true)
             {
-                linkSolvedTasks.Clear();
-                linkSolvedTasks.Append($"{Immutable.OkdeskApiLink}/issues/count?api_token={Config.OkdeskApiToken}&assignee_ids[]={employee.Id}&completed_since={dateFrom:dd-MM-yyyy} 00:00&completed_until={dateTo:dd-MM-yyyy} 23:59");
-                var responseSolved = await GetResponse(linkSolvedTasks.ToString());
-                if (string.IsNullOrEmpty(responseSolved) || responseSolved == "[]")
+                linkOpenTasks.Clear();
+                linkOpenTasks.Append($"{Immutable.OkdeskApiLink}/issues/list?api_token={Config.OkdeskApiToken}");
+
+                linkOpenTasks.Append($"&updated_since={updatedSince.ToString("dd-MM-yyyy HH:mm:ss")}");
+                linkOpenTasks.Append($"&updated_until={updatedUntil.ToString("dd-MM-yyyy HH:mm:ss")}");
+                linkOpenTasks.Append($"&assignee_ids[]={assigneeId}");
+                linkOpenTasks.Append("&page[size]=50");
+                linkOpenTasks.Append($"&page[number]={pageNumber}");
+
+                var responseOpen = await SendApiRequest(linkOpenTasks.ToString());
+
+                if (!string.IsNullOrEmpty(responseOpen) && responseOpen != "[]")
                 {
                     try
                     {
-                        numberOfSolvedTask = JsonConvert.DeserializeObject<int[]>(responseSolved);
-                    }
-                    catch (Exception e) { WriteLog.Error(e.ToString()); return false; }
+                        Issue[]? list = JsonConvert.DeserializeObject<Issue[]>(responseOpen);
 
-                    if (numberOfSolvedTask?.Length == 0 || numberOfSolvedTask?.Length == null)
-                        employee.SolvedTasks = 0;
-                    else
-                    {
-                        employee.SolvedTasks = numberOfSolvedTask.Length;
-                        employee.IsSelected = true;
-                    }
+                        if (list != null || list?.Length > 0)
+                        {
+                            foreach (var issue in list)
+                            {
+                                // Эта строчка необходима чтобы можно было делать выборку из БД по "свежим задачам" т.к. в API отсутствует employees_updated_at параметр
+                                issue.Employees_updated_at = DateTime.Now;
+                                // И параметр assignee_id тоже отсутствует, поэтому присваиваем заявке его тут
+                                issue.Assignee_id = assigneeId;
+                                issues.Add(issue);
+                            }
 
-                    numberOfSolvedTask = null;
+                            pageNumber++;
+
+                            if (list?.Length < 50)
+                                break;
+                        }
+                        else break;
+                    }
+                    catch (Exception e) { WriteLog.Error(e.ToString()); break; }
                 }
-                else
-                    employee.SolvedTasks = 0;
+                else break;
             }
-            return true;
-        }
 
-        */
+            return issues;
 
-        public static async Task<Issue[]?> GetReportOpenTasks(ICollection<Employee> employees)    // Получение списка открытых заявок
-        {
-            StringBuilder linkOpenTasks = new();
+            /*StringBuilder linkOpenTasks = new();
             int pageNumber;
 
             foreach (var employee in employees.Where(e => e.Active))
@@ -264,64 +281,71 @@ namespace AqbaServer.API
                     else break;
                 }
             }
-            return null;
+            return null;*/
+        }
+
+        public static async Task<IssueJSON?> GetIssue(int issueId)
+        {
+            string link = $"{Immutable.OkdeskApiLink}/issues/{issueId}?api_token={Config.OkdeskApiToken}";
+            var response = await SendApiRequest(link);
+            if (string.IsNullOrEmpty(response) || response == "[]")
+                return null;
+
+            try
+            {
+                return JsonConvert.DeserializeObject<IssueJSON>(response);
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return null;
+            }
         }
 
         public static async Task<Group[]?> GetGroups()
         {
             string link = Immutable.OkdeskApiLink + "/employees/groups?api_token=" + Config.OkdeskApiToken;
-            Group[]? tempGroups = Array.Empty<Group>();
             var response = await SendApiRequest(link);
 
             if (string.IsNullOrEmpty(response) || response == "[]")
                 return null;
             try
             {
-                tempGroups = JsonConvert.DeserializeObject<Group[]>(response);
+                return JsonConvert.DeserializeObject<Group[]>(response);
             }
-            catch (Exception e) { WriteLog.Error(e.ToString()); }
-
-            if (tempGroups != null && tempGroups.Length > 0)
-                return tempGroups;
-
-            return null;
+            catch (Exception e) { WriteLog.Error(e.ToString()); return null; }
 
         }
 
         public static async Task<Role[]?> GetRoles()
         {
-            string link = Immutable.OkdeskApiLink + "/employees/roles/?api_token=" + Config.OkdeskApiToken;
-            Role[]? roles = Array.Empty<Role>();
+            string link = Immutable.OkdeskApiLink + "/employees/roles?api_token=" + Config.OkdeskApiToken;
             var response = await SendApiRequest(link);
 
             if (string.IsNullOrEmpty(response) || response == "[]")
                 return null;
+
             try
             {
-                roles = JsonConvert.DeserializeObject<Role[]>(response);
+                return JsonConvert.DeserializeObject<Role[]>(response);
             }
-            catch (Exception e) { WriteLog.Error(e.ToString()); }
-
-            if (roles != null && roles.Length > 0)
-                return roles;
-
-            return null;
+            catch (Exception e) { WriteLog.Error(e.ToString()); return null; }
 
         }
 
-        public static async Task<TaskType[]?> GetTypes()
+        public static async Task<ICollection<IssueType>?> GetTypes()
         {
             string link = Immutable.OkdeskApiLink + "/dictionaries/issues/types?api_token=" + Config.OkdeskApiToken;
-            TaskType[]? types = [];
-            List<TaskType> list;
+            IssueType[]? types = [];
+            List<IssueType> list = [];
             var response = await SendApiRequest(link);
 
             if (string.IsNullOrEmpty(response) || response == "[]")
-                return null;
+                return list;
 
             try
             {
-                types = JsonConvert.DeserializeObject<TaskType[]>(response);
+                types = JsonConvert.DeserializeObject<IssueType[]>(response);
             }
             catch (Exception e) { WriteLog.Error(e.ToString()); }
 
@@ -343,16 +367,14 @@ namespace AqbaServer.API
                         }
                     }
                 }
-                return list.ToArray();
+                return list;
             }
-            return null;
-
+            return list;
         }
 
         public static async Task<Status[]?> GetStatuses()
         {
-            string link = Immutable.OkdeskApiLink + "/issues/statuses/?api_token=" + Config.OkdeskApiToken;
-            Status[]? statuses = [];
+            string link = Immutable.OkdeskApiLink + "/issues/statuses?api_token=" + Config.OkdeskApiToken;
             var response = await SendApiRequest(link);
 
             if (string.IsNullOrEmpty(response) || response == "[]")
@@ -360,21 +382,14 @@ namespace AqbaServer.API
 
             try
             {
-                statuses = JsonConvert.DeserializeObject<Status[]>(response);
+                return JsonConvert.DeserializeObject<Status[]>(response);
             }
-            catch (Exception e) { WriteLog.Error(e.ToString()); }
-
-            if (statuses != null && statuses.Length > 0)
-                return statuses;
-
-            return null;
-
+            catch (Exception e) { WriteLog.Error(e.ToString()); return null; }
         }
 
         public static async Task<Priority[]?> GetPriorities()
         {
-            string link = Immutable.OkdeskApiLink + "/issues/priorities/?api_token=" + Config.OkdeskApiToken;
-            Priority[]? priorities = [];
+            string link = Immutable.OkdeskApiLink + "/issues/priorities?api_token=" + Config.OkdeskApiToken;
             var response = await SendApiRequest(link);
 
             if (string.IsNullOrEmpty(response) || response == "[]")
@@ -382,18 +397,28 @@ namespace AqbaServer.API
 
             try
             {
-                priorities = JsonConvert.DeserializeObject<Priority[]>(response);
+                return JsonConvert.DeserializeObject<Priority[]>(response);
             }
-            catch (Exception e) { WriteLog.Error(e.ToString()); }
+            catch (Exception e) { WriteLog.Error(e.ToString()); return null; }
+        }
 
-            if (priorities != null && priorities.Length > 0)
-                return priorities;
+        public static async Task<TimeEntries?> GetTimeEntries(int issueId)
+        {
+            string link = Immutable.OkdeskApiLink + $"/issues/{issueId}/time_entries?api_token=" + Config.OkdeskApiToken;
+            var response = await SendApiRequest(link);
 
-            return null;
+            if (string.IsNullOrEmpty(response) || response == "[]")
+                return null;
+
+            try
+            {
+                return JsonConvert.DeserializeObject<TimeEntries>(response);
+            }
+            catch (Exception e) { WriteLog.Error(e.ToString()); return null; }
 
         }
 
-        public static async Task GetTime(List<Employee> employees, DateTime dateFrom, DateTime dateTo)
+        /*public static async Task GetTime(ICollection<Employee> employees, DateTime dateFrom, DateTime dateTo)
         {
             foreach (var employee in employees)
             {
@@ -426,7 +451,7 @@ namespace AqbaServer.API
             }
         }
 
-        public static async Task GetTasks(List<Employee> Employees, DateTime dateFrom, DateTime dateTo)
+        public static async Task GetTasks(ICollection<Employee> Employees, DateTime dateFrom, DateTime dateTo)
         {
             foreach (var employee in Employees)
             {
@@ -456,7 +481,7 @@ namespace AqbaServer.API
 
                 i++;
             }
-        }
+        }*/
 
         public static async Task<bool> Login(string loginReferer, string content)
         {
@@ -538,8 +563,8 @@ namespace AqbaServer.API
         {
             try
             {
+                await Task.Delay(300);
                 using HttpResponseMessage response = await httpClient.GetAsync(link);
-                await Task.Delay(400);
                 if (response.StatusCode == HttpStatusCode.Unauthorized)
                     return null;
                 else if (response.StatusCode == HttpStatusCode.NotFound)

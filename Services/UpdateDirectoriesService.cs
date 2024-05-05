@@ -1,4 +1,5 @@
-﻿using AqbaServer.Interfaces.OkdeskEntities;
+﻿using AqbaServer.Helper;
+using AqbaServer.Interfaces.OkdeskEntities;
 using AqbaServer.Interfaces.OkdeskPerformance;
 
 namespace AqbaServer.Services
@@ -10,101 +11,150 @@ namespace AqbaServer.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            await Task.Delay(TimeSpan.FromMinutes(30), stoppingToken); // Задержка при запуске сервиса
+            await Task.Delay(TimeSpan.FromMinutes(45), stoppingToken); // Задержка при запуске сервиса
 
             while (!stoppingToken.IsCancellationRequested)
             {
+                WriteLog.Info("Инициализировано обновление справочников...");
 
-                await UpdateKind();
-                await UpdateManufacturer();
-                await UpdateModel();
-                await UpdateEmployeeRole();
-                await UpdateEmployee();
-                await UpdateEmployeeGroup();
-                await UpdateCompany();
-                await UpdateMaintenanceEntity();
-                await UpdateEquipment();
-                await UpdateIssueDictionary();
+                await UpdateEmployeeRoles();
+                await UpdateEmployees();                
+                await UpdateEmployeeGroups();
+                await UpdateEmployeeGroupsConnect();
+                await UpdateKindParameters();
+                await UpdateKinds();
+                await UpdateManufacturerers();
+                await UpdateModels();
+                await UpdateCategories();
+                await UpdateCompanies();
+                await UpdateMaintenanceEntities();
+                await UpdateIssueDictionaries();
+                await UpdateIssues();
+                await UpdateTimeEntries();
+                await UpdateEquipments();
 
-                TimeSpan remaining = DateTime.Now.AddHours(3) - DateTime.Now;
+                WriteLog.Info("Обновление справочников успешно завершено!");
+
+                TimeSpan remaining = DateTime.Now.AddHours(6) - DateTime.Now;
                 await Task.Delay(remaining, stoppingToken);
             }
         }
 
-        async Task UpdateIssueDictionary()
-        {
-            using IServiceScope scope = serviceScopeFactory.CreateScope();
-            IIssueRepository issueRepository = scope.ServiceProvider.GetRequiredService<IIssueRepository>();
-            await issueRepository.UpdateIssueDictionary();
-        }
-
-        async Task UpdateKind()
-        {
-            using IServiceScope scope = serviceScopeFactory.CreateScope();
-            IKindRepository kindRepository = scope.ServiceProvider.GetRequiredService<IKindRepository>();
-            await kindRepository.GetKindsFromOkdesk();
-        }
-
-        async Task UpdateManufacturer()
-        {
-            using IServiceScope scope = serviceScopeFactory.CreateScope();
-            IManufacturerRepository manufacturerRepository = scope.ServiceProvider.GetRequiredService<IManufacturerRepository>();
-            await manufacturerRepository.GetManufacturersFromOkdesk();
-        }
-
-        async Task UpdateModel()
-        {
-            using IServiceScope scope = serviceScopeFactory.CreateScope();
-            IModelRepository modelRepository = scope.ServiceProvider.GetRequiredService<IModelRepository>();
-            await modelRepository.GetModelsFromOkdesk();
-        }
-
-        async Task UpdateEmployee()
-        {
-            using IServiceScope scope = serviceScopeFactory.CreateScope();
-            IEmployeeRepository employeeRepository = scope.ServiceProvider.GetRequiredService<IEmployeeRepository>();
-            await employeeRepository.GetEmployeesFromOkdesk();
-        }
-
-        async Task UpdateEmployeeGroup()
-        {
-            using IServiceScope scope = serviceScopeFactory.CreateScope();
-            IGroupRepository employeeGroupRepository = scope.ServiceProvider.GetRequiredService<IGroupRepository>();
-            await employeeGroupRepository.GetGroupsFromOkdesk();
-        }
-
-        async Task UpdateEmployeeRole()
+        async Task UpdateEmployeeRoles()
         {
             using IServiceScope scope = serviceScopeFactory.CreateScope();
             IRoleRepository employeeRoleRepository = scope.ServiceProvider.GetRequiredService<IRoleRepository>();
+            // Обновление через обычное API т.к. в SQL API нет метода на получение ролей
             await employeeRoleRepository.GetRolesFromOkdesk();
         }
 
-        async Task UpdateCompany()
+        async Task UpdateEmployees()
+        {
+            using IServiceScope scope = serviceScopeFactory.CreateScope();
+            IEmployeeRepository employeeRepository = scope.ServiceProvider.GetRequiredService<IEmployeeRepository>();
+            // Обновление через обычное API т.к. в SQL API нет связей с ролями и таблица many to many не заполняется
+            await employeeRepository.UpdateEmployeesFromAPIOkdesk();
+        }
+
+        async Task UpdateEmployeeGroups()
+        {
+            using IServiceScope scope = serviceScopeFactory.CreateScope();
+            IGroupRepository employeeGroupRepository = scope.ServiceProvider.GetRequiredService<IGroupRepository>();
+            await employeeGroupRepository.GetGroupsFromDBOkdesk();
+        }
+
+        async Task UpdateEmployeeGroupsConnect()
+        {
+            using IServiceScope scope = serviceScopeFactory.CreateScope();
+            IEmployeeGroupsRepository employeeGroupsRepository = scope.ServiceProvider.GetRequiredService<IEmployeeGroupsRepository>();
+            await employeeGroupsRepository.UpdateEmployeeGroupsFromDBOkdesk();
+        }
+
+        async Task UpdateKindParameters()
+        {
+            using IServiceScope scope = serviceScopeFactory.CreateScope();
+            IKindParameterRepository kindParameterRepository = scope.ServiceProvider.GetRequiredService<IKindParameterRepository>();
+            // Обновление через обычное API, а не через SQL API т.к. в во втором пока что нет возможности получить связи между kind и kind_parameters
+            await kindParameterRepository.UpdateKindParametersFromAPIOkdesk();
+        }
+
+        async Task UpdateKinds()
+        {
+            using IServiceScope scope = serviceScopeFactory.CreateScope();
+            IKindRepository kindRepository = scope.ServiceProvider.GetRequiredService<IKindRepository>();
+            await kindRepository.UpdateKindsFromAPIOkdesk();
+        }
+
+        async Task UpdateManufacturerers()
+        {
+            using IServiceScope scope = serviceScopeFactory.CreateScope();
+            IManufacturerRepository manufacturerRepository = scope.ServiceProvider.GetRequiredService<IManufacturerRepository>();
+            await manufacturerRepository.UpdateManufacturersFromDBOkdesk();
+        }
+
+        async Task UpdateModels()
+        {
+            using IServiceScope scope = serviceScopeFactory.CreateScope();
+            IModelRepository modelRepository = scope.ServiceProvider.GetRequiredService<IModelRepository>();
+            await modelRepository.UpdatetModelsFromDBOkdesk();
+        }
+
+        async Task UpdateCategories()
+        {
+            using IServiceScope scope = serviceScopeFactory.CreateScope();
+            ICategoryRepository categoryRepository = scope.ServiceProvider.GetRequiredService<ICategoryRepository>();
+            await categoryRepository.UpdateCategoriesFromDBOkdesk();
+        }
+
+        async Task UpdateCompanies()
         {
             using IServiceScope scope = serviceScopeFactory.CreateScope();
             ICompanyRepository companyRepository = scope.ServiceProvider.GetRequiredService<ICompanyRepository>();
-            int? lastCompanyId = await companyRepository.GetLastCompanyId();
-            if (lastCompanyId != null)
-                await companyRepository.GetCompaniesFromOkdesk((int)lastCompanyId);
+            // Обновление через обычное API т.к. в SQL API нельзя получить цвет категорий
+            await companyRepository.UpdateCompaniesFromAPIOkdesk();
         }
 
-        async Task UpdateMaintenanceEntity()
+        async Task UpdateMaintenanceEntities()
         {
             using IServiceScope scope = serviceScopeFactory.CreateScope();
             IMaintenanceEntityRepository maintenanceEntityRepository = scope.ServiceProvider.GetRequiredService<IMaintenanceEntityRepository>();
-            int? lastMaintenanceEntityId = await maintenanceEntityRepository.GetLastMaintenanceEntitiyId();
-            if (lastMaintenanceEntityId != null)
-                await maintenanceEntityRepository.GetMaintenanceEntitiesFromOkdesk((int)lastMaintenanceEntityId);
+            await maintenanceEntityRepository.UpdateMaintenanceEntitiesFromDBOkdesk();
         }
 
-        async Task UpdateEquipment()
+        async Task UpdateIssueDictionaries()
+        {
+            using IServiceScope scope = serviceScopeFactory.CreateScope();
+            IIssueRepository issueRepository = scope.ServiceProvider.GetRequiredService<IIssueRepository>();
+            await issueRepository.UpdateIssueDictionaryFromDB();
+        }
+
+        async Task UpdateIssues()
+        {
+            using IServiceScope scope = serviceScopeFactory.CreateScope();
+            IIssueRepository issueRepository = scope.ServiceProvider.GetRequiredService<IIssueRepository>();
+
+            DateTime now = DateTime.Now;
+            DateTime dateFrom = new(now.Year, now.Month, now.Day, hour: 0, minute: 0, second: 0);
+            DateTime dateTo = new(now.Year, now.Month, now.Day, hour: 23, minute: 59, second: 59);
+            await issueRepository.UpdateIssuesFromDBOkdesk(dateFrom.AddDays(-1), dateTo);
+        }
+
+        async Task UpdateTimeEntries()
+        {
+            using IServiceScope scope = serviceScopeFactory.CreateScope();
+            ITimeEntryRepository timeEntryRepository = scope.ServiceProvider.GetRequiredService<ITimeEntryRepository>();
+
+            DateTime now = DateTime.Now;
+            DateTime dateFrom = new(now.Year, now.Month, now.Day, hour: 0, minute: 0, second: 0);
+            DateTime dateTo = new(now.Year, now.Month, now.Day, hour: 23, minute: 59, second: 59);
+            await timeEntryRepository.UpdateTimeEntryFromDBOkdesk(dateFrom.AddDays(-1), dateTo);
+        }
+
+        async Task UpdateEquipments()
         {
             using IServiceScope scope = serviceScopeFactory.CreateScope();
             IEquipmentRepository equipmentRepository = scope.ServiceProvider.GetRequiredService<IEquipmentRepository>();
-            int? lastEquipmentId = await equipmentRepository.GetLastEquipmentId();
-            if (lastEquipmentId != null)
-                await equipmentRepository.GetEquipmentsFromOkdesk((int)lastEquipmentId);
+            await equipmentRepository.UpdateEquipmentsFromDBOkdesk();
         }
     }
 }

@@ -22,7 +22,7 @@ namespace AqbaServer.Controllers.OkdeskEntities
         }
 
         [HttpGet]
-        [ProducesResponseType(200, Type = typeof(IEnumerable<TaskType>))]
+        [ProducesResponseType(200, Type = typeof(IEnumerable<IssueType>))]
         [ProducesResponseType(400)]
         public async Task<IActionResult> GetIssueTypes()
         {
@@ -35,6 +35,17 @@ namespace AqbaServer.Controllers.OkdeskEntities
                 return BadRequest(ModelState);
 
             return Ok(types);
-        }        
+        }
+
+        [HttpGet("okdesk")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(500)]
+        public async Task<IActionResult> GetIssueTypesFromOkdesk()
+        {
+            if (await _issueTypeRepository.GetTypesFromDBOkdesk() == false)
+                return StatusCode(500, "Внутренняя ошибка при получении типов из БД окдеска");
+
+            return Ok("Типы успешно обновлены");
+        }
     }
 }

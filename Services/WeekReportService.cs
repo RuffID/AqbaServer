@@ -7,17 +7,23 @@ namespace AqbaServer.Services
     {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            await Task.Delay(TimeSpan.FromMinutes(30), stoppingToken);
+            await Task.Delay(TimeSpan.FromHours(24), stoppingToken);
 
             while (!stoppingToken.IsCancellationRequested)
             {
                 using (IServiceScope scope = serviceScopeFactory.CreateScope())
                 {
-                    IEmployeePerformanceRepository employeePerformanceRepository =
-                        scope.ServiceProvider.GetRequiredService<IEmployeePerformanceRepository>();
+                    IIssueRepository issueRepository =
+                        scope.ServiceProvider.GetRequiredService<IIssueRepository>();
+                    ITimeEntryRepository timeEntryRepository =
+                        scope.ServiceProvider.GetRequiredService<ITimeEntryRepository>();
 
-                    await employeePerformanceRepository.GetEmployeePerformanceFromOkdesk(DateTime.Now.AddDays(-7), DateTime.Now.AddDays(-7));
-                    ThirtyMinutesReportService.TimeOfLastReportReceived = DateTime.UtcNow;
+                    DateTime dateFrom = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, hour: 0, minute: 0, second: 0).AddDays(-7);
+                    DateTime dateTo = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, hour: 23, minute: 59, second: 59).AddDays(-7);
+
+                    await issueRepository.UpdateIssuesFromDBOkdesk(dateFrom, dateTo);
+                    await timeEntryRepository.UpdateTimeEntryFromDBOkdesk(dateFrom, dateTo);
+                    ThirtyMinutesReportService.TimeOfLastUpdateRequest = DateTime.Now;
                 }
 
                 DateTime nextDay = DateTime.Now.AddDays(1);

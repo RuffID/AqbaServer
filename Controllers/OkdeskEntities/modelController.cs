@@ -72,6 +72,17 @@ namespace AqbaServer.Controllers.OkdeskEntities
             return Ok();
         }
 
+        [HttpGet("okdeskDB")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(500)]
+        public async Task<IActionResult> GetModelsFromDBOkdesk()
+        {
+            if (await _modelRepository.UpdatetModelsFromDBOkdesk() == false)
+                return StatusCode(500, "Внутренняя ошибка при получении моделей из БД окдеска");
+
+            return Ok("Модели успешно обновлены");
+        }
+
         [HttpPost, Authorize(Roles = UserRole.Admin)]
         [ProducesResponseType(204)]
         [ProducesResponseType(400)]
