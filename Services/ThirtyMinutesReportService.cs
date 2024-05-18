@@ -12,7 +12,9 @@ namespace AqbaServer.Services
         {
             try
             {
-                await Task.Delay(TimeSpan.FromMinutes(45), stoppingToken); // Задержка при запуске сервиса
+                #if DEBUG
+                    await Task.Delay(2700000, stoppingToken); // Задержка при запуске сервиса 45 минут
+                #endif
 
                 while (!stoppingToken.IsCancellationRequested)
                 {
@@ -22,7 +24,7 @@ namespace AqbaServer.Services
                             scope.ServiceProvider.GetRequiredService<IEmployeePerformanceRepository>();
 
                         if (TimeOfLastUpdateRequest.AddMinutes(timeout + 1) > DateTime.Now)
-                            await employeePerformanceRepository.UpdatePerformanceFromOkdeskAPI(DateTime.Now.AddMinutes(-15), DateTime.Now);
+                            await employeePerformanceRepository.UpdatePerformanceFromOkdeskAPI(DateTime.Now.AddMinutes(-35), DateTime.Now);
                     }
 
                     TimeSpan remaining = TimeOfLastUpdateRequest.AddMinutes(timeout) - DateTime.Now;

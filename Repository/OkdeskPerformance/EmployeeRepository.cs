@@ -16,12 +16,7 @@ namespace AqbaServer.Repository.OkdeskPerformance
         {
             _roleRepository = roleRepository;
             _employeeRolesRepository = employeeRolesRepository;
-        }
-
-        public async Task<int[]?> SelectEmployeesIdByGroup(int groupId)
-        {
-            return await DBSelect.SelectEmployeesByGroup(groupId);
-        }
+        }        
 
         public async Task<ICollection<Employee>?> GetEmployees(int employeeId)
         {
@@ -31,6 +26,25 @@ namespace AqbaServer.Repository.OkdeskPerformance
         public async Task<ICollection<Employee>?> GetEmployees()
         {
             return await DBSelect.SelectEmployees();
+        }
+
+        public async Task<ICollection<GroupEmployee>> GetGroupEmployeeConnections()
+        {
+            ICollection<GroupEmployee> groupEmployeeConnections = [];
+
+            var employees = await DBSelect.SelectEmployees();
+            if (employees == null) return groupEmployeeConnections;
+
+            foreach (var employee in employees)
+            {
+                var groups = await DBSelect.SelectGroupsByEmployee(employee.Id);
+
+                if (groups == null) continue;
+
+                groupEmployeeConnections.Add(new (employee.Id, groups.ToArray()));
+            }
+
+            return groupEmployeeConnections;
         }
 
         public async Task<bool> UpdateEmployeesFromAPIOkdesk()

@@ -54,9 +54,9 @@ namespace AqbaServer.Repository.OkdeskPerformance
             return await DBSelect.SelectIssues(updatedFrom, updatedTo);
         }
 
-        public async Task<ICollection<Issue>?> GetOpenAndCompletedOrClosedIssues(DateTime dateFrom, DateTime dateTo, int employeeId)
+        public async Task<Issue[]?> GetOpenAndCompletedOrClosedIssues(DateTime dateFrom, DateTime dateTo, int employeeId)
         {
-            return await DBSelect.SelectOpenAndCompletedIssues(dateFrom, dateTo, employeeId);
+            return (await DBSelect.SelectOpenAndCompletedIssues(dateFrom, dateTo, employeeId))?.ToArray();
         }
 
         public async Task<int> GetCompletedOrClosedIssues(DateTime closedOrCompletedFrom, DateTime closedOrCompletedTo, int employeeId)

@@ -53,9 +53,9 @@ namespace AqbaServer.Repository.OkdeskPerformance
             // Цикл проходит по всем сотрудникам и получает количество решённых заявок, список текущих заявок за период и количество списанного времени из локальной БД
             foreach (var employee in employees)
             {
-                employee.SolvedTasks = await _issueRepository.GetCompletedOrClosedIssues(dateFrom, dateTo, employee.Id);
+                employee.SolvedIssues = await _issueRepository.GetCompletedOrClosedIssues(dateFrom, dateTo, employee.Id);
                 employee.Issues = await _issueRepository.GetOpenAndCompletedOrClosedIssues(dateFrom, dateTo, employee.Id);
-                employee.SpentedTimeDouble = await _timeEntryRepository.GetTimeEntryByEmployeeId(dateFrom, dateTo, employee.Id);                
+                employee.SpentedTime = await _timeEntryRepository.GetTimeEntryByEmployeeId(dateFrom, dateTo, employee.Id);                
             }
 
             return ConvertEmployeeToEmployeeDto(employees);
@@ -155,8 +155,8 @@ namespace AqbaServer.Repository.OkdeskPerformance
                     // Присвоение данных для конвертированного в employeeDto экземпляра класса
                     tempEmp.Id = employee.Id;
                     tempEmp.Issues = tempIssues.ToArray();
-                    tempEmp.SpentedTime = employee.SpentedTimeDouble;
-                    tempEmp.SolvedTasks = employee.SolvedTasks;
+                    tempEmp.SpentedTime = employee.SpentedTime;
+                    tempEmp.SolvedIssues = employee.SolvedIssues;
                 }
                 // Добавление конвертированного сотрудника (employeeDto) в общий список Dto сотрудников
                 employeesDto.Add(tempEmp);

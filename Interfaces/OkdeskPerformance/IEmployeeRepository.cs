@@ -6,7 +6,7 @@ namespace AqbaServer.Interfaces.OkdeskPerformance
     {
         Task<bool> UpdateEmployeesFromAPIOkdesk();
         Task<Employee?> GetEmployee(Employee? employee);
-        Task<int[]?> SelectEmployeesIdByGroup(int groupId);
+        Task<ICollection<GroupEmployee>> GetGroupEmployeeConnections();
         Task<bool> UpdateEmployee(int employeeId, Employee? employee);
         Task<bool> CreateEmployee(Employee? employee);
         Task<ICollection<Employee>?> GetEmployees(int employeeId);

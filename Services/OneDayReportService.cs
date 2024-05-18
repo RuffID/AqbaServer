@@ -7,7 +7,7 @@ namespace AqbaServer.Services
     {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            await Task.Delay(TimeSpan.FromHours(10), stoppingToken);
+            await Task.Delay(36000000, stoppingToken);
 
             while (!stoppingToken.IsCancellationRequested)
             {

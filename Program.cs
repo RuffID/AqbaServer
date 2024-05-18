@@ -46,19 +46,12 @@ try
         {
             options.TokenValidationParameters = new TokenValidationParameters
             {
-                // указывает, будет ли валидироваться издатель при валидации токена
                 ValidateIssuer = true,
-                // строка, представляющая издателя
                 ValidIssuer = AuthOptions.ISSUER,
-                // будет ли валидироваться потребитель токена
                 ValidateAudience = true,
-                // установка потребителя токена
                 ValidAudience = AuthOptions.AUDIENCE,
-                // будет ли валидироваться время существования
                 ValidateLifetime = true,
-                // установка ключа безопасности
                 IssuerSigningKey = AuthOptions.GetSymmetricSecurityKey(),
-                // валидация ключа безопасности
                 ValidateIssuerSigningKey = true,
             };
         });
@@ -95,10 +88,9 @@ try
     builder.Configuration.AddJsonFile(Config.Path);
 
     builder.Services.AddHostedService<CheckLogFilesService>();
-
     builder.Services.AddHostedService<LoginService>();
-    builder.Services.AddHostedService<UpdateDirectoriesService>();
     builder.Services.AddHostedService<ThirtyMinutesReportService>();
+    builder.Services.AddHostedService<UpdateDirectoriesService>();
     builder.Services.AddHostedService<OneDayReportService>();
     builder.Services.AddHostedService<WeekReportService>();
 
@@ -130,5 +122,5 @@ catch (Exception ex)
 }
 finally
 {
-    WriteLog.Info($"Shutdown service");
+    WriteLog.Info("Shutdown service");
 }

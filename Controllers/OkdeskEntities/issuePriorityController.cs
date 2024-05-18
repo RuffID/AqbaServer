@@ -22,7 +22,7 @@ namespace AqbaServer.Controllers.OkdeskEntities
         }
 
         [HttpGet]
-        [ProducesResponseType(200, Type = typeof(IEnumerable<Priority>))]
+        [ProducesResponseType(200, Type = typeof(IEnumerable<PriorityDto>))]
         [ProducesResponseType(400)]
         public async Task<IActionResult> GetIssuePriorities()
         {

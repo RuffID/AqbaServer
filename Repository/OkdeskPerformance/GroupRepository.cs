@@ -29,7 +29,7 @@ namespace AqbaServer.Repository.OkdeskPerformance
         public async Task<ICollection<Group>?> GetGroups()
         {
             return await DBSelect.SelectGroups();
-        }
+        }        
 
         public async Task<bool> UpdateGroup(int groupId, Group group)
         {

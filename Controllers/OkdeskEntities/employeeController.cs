@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using AqbaServer.Models.OkdeskPerformance;
 using Microsoft.AspNetCore.Authorization;
 using AqbaServer.Models.Authorization;
 using AqbaServer.Interfaces.OkdeskPerformance;
+using AqbaServer.Dto;
+using AutoMapper;
+using AqbaServer.Models.OkdeskPerformance;
 
 namespace AqbaServer.Controllers.OkdeskEntities
 {
@@ -12,18 +14,36 @@ namespace AqbaServer.Controllers.OkdeskEntities
     public class employeeController : Controller
     {
         private readonly IEmployeeRepository _employeeRepository;
+        private readonly IMapper _mapper;
 
-        public employeeController(IEmployeeRepository employeeRepository)
+        public employeeController(IEmployeeRepository employeeRepository, IMapper mapper)
         {
             _employeeRepository = employeeRepository;
+            _mapper = mapper;
         }
 
         [HttpGet]
-        [ProducesResponseType(200, Type = typeof(IEnumerable<Employee>))]
+        [ProducesResponseType(200, Type = typeof(IEnumerable<EmployeeDto>))]
         [ProducesResponseType(400)]
-        public async Task<IActionResult> GetEmployees([FromQuery] int employeeId)
+        public async Task<IActionResult> GetEmployees([FromQuery] int id)
         {
-            var employees = await _employeeRepository.GetEmployees(employeeId);
+            var employees = _mapper.Map<ICollection<EmployeeDto>>(await _employeeRepository.GetEmployees(id));
+
+            if (employees == null)
+                return NotFound();
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            return Ok(employees);
+        }
+
+        [HttpGet("group_employee")]
+        [ProducesResponseType(200, Type = typeof(ICollection<GroupEmployee>))]
+        [ProducesResponseType(400)]
+        public async Task<IActionResult> GetGroupEmployeeConnections()
+        {
+            var employees = await _employeeRepository.GetGroupEmployeeConnections();
 
             if (employees == null)
                 return NotFound();
@@ -48,7 +68,7 @@ namespace AqbaServer.Controllers.OkdeskEntities
             return Ok();
         }
 
-        [HttpGet("okdeskDB")]
+        [HttpGet("okdeskDB"), Authorize(Roles = UserRole.Admin)]
         [ProducesResponseType(200)]
         [ProducesResponseType(500)]
         public async Task<IActionResult> GetEmployeesDBOkdesk()

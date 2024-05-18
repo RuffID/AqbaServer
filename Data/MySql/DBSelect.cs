@@ -1761,20 +1761,22 @@ namespace AqbaServer.Data.MySql
             }
         }
 
-        public static async Task<int[]?> SelectEmployeesByGroup(int groupId)
+        public static async Task<ICollection<int>?> SelectGroupsByEmployee(int employeeId)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
             MySqlCommand cmd = connection.CreateCommand();
             try
             {
                 await connection.OpenAsync();
-                List<int> employees = [];
+                ICollection<int> groups = [];
+
                 // ¬озвращает массив строк с id сотрудников
-                string sqlCommand = string.Format(
+                string sqlCommand = $"SELECT groupId FROM employee_groups WHERE employeeId = {employeeId};";
+                /*string sqlCommand = string.Format(
                     "SELECT employee_groups.employeeId AS employeeId " +
                     "FROM employee_groups " +
                     "JOIN `group` ON employee_groups.groupId = `group`.id " +
-                    "WHERE `group`.id = {0}", groupId);
+                    "WHERE `group`.id = {0}", groupId);*/
 
                 cmd.Connection = connection;
                 cmd.CommandText = sqlCommand;
@@ -1784,11 +1786,11 @@ namespace AqbaServer.Data.MySql
                 {
                     while (await reader.ReadAsync())
                     {
-                        if (!reader.IsDBNull(reader.GetOrdinal("employeeId")))
-                            employees.Add(Convert.ToInt32(reader["employeeId"]));                  
+                        if (!reader.IsDBNull(reader.GetOrdinal("groupId")))
+                            groups.Add(Convert.ToInt32(reader["groupId"]));                  
                     }
                 }
-                return employees.ToArray();
+                return groups;
             }
             catch (Exception e)
             {
@@ -2141,7 +2143,7 @@ namespace AqbaServer.Data.MySql
                         if (!reader.IsDBNull(reader.GetOrdinal("description")))
                             group.Description = reader["description"].ToString();
 
-                        group.EmployeesId = await SelectEmployeesByGroup(group.Id);
+                        //group.EmployeesId = await SelectEmployeesByGroup(group.Id);
 
                         groups.Add(group);
                     }

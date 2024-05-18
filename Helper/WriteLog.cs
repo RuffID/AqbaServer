@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using System.Diagnostics;
 
 namespace AqbaServer.Helper
 {
@@ -102,11 +101,6 @@ namespace AqbaServer.Helper
             }
 
             processing = false;
-        }
-
-        public static string GetMethodName()
-        {
-            return " (Method name: " + new StackTrace(1)?.GetFrame(0)?.GetMethod()?.Name + ")";
         }
     }
 }

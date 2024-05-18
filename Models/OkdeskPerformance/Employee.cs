@@ -16,28 +16,10 @@ namespace AqbaServer.Models.OkdeskPerformance
         public string? Comment { get; set; }
         public Group[]? Groups { get; set; }
         public Role[]? Roles { get; set; }
-        public int SolvedTasks { get; set; }
-        public double SpentedTimeDouble { get; set; }
-        public ICollection<Issue>? Issues { get; set; }
+        public int SolvedIssues { get; set; }
+        public double SpentedTime { get; set; }
+        public Issue[]? Issues { get; set; }
 
-        public Employee() { Issues = []; }
-        public Employee(Employee employee)
-        {
-            Id = employee.Id;
-            Last_name = employee.Last_name;
-            First_name = employee.First_name;
-            Patronymic = employee.Patronymic;
-            Position = employee.Position;
-            Email = employee.Email;
-            Login = employee.Login;
-            Phone = employee.Phone;
-            Comment = employee.Comment;
-            Groups = employee.Groups;
-            Roles = employee.Roles;
-            SolvedTasks = employee.SolvedTasks;
-            Groups = [];
-            Roles = [];
-            Issues = [];
-        }
+        public Employee() { Issues = []; }        
     }
 }

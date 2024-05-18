@@ -7,7 +7,7 @@ namespace AqbaServer.Services
     {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            await Task.Delay(TimeSpan.FromHours(24), stoppingToken);
+            await Task.Delay(86400000, stoppingToken);
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -23,7 +23,6 @@ namespace AqbaServer.Services
 
                     await issueRepository.UpdateIssuesFromDBOkdesk(dateFrom, dateTo);
                     await timeEntryRepository.UpdateTimeEntryFromDBOkdesk(dateFrom, dateTo);
-                    ThirtyMinutesReportService.TimeOfLastUpdateRequest = DateTime.Now;
                 }
 
                 DateTime nextDay = DateTime.Now.AddDays(1);

@@ -12,7 +12,7 @@ namespace AqbaServer.Interfaces.OkdeskPerformance
         Task<bool> UpdateIssueDictionaryFromDB();
         Task<bool> UpdateIssuesFromDBOkdesk(DateTime dateFrom, DateTime dateTo);
         Task<int> GetCompletedOrClosedIssues(DateTime closedOrCompletedFrom, DateTime closedOrCompletedTo, int employeeId);
-        Task<ICollection<Issue>?> GetOpenAndCompletedOrClosedIssues(DateTime dateFrom, DateTime dateTo, int employeeId);
+        Task<Issue[]?> GetOpenAndCompletedOrClosedIssues(DateTime dateFrom, DateTime dateTo, int employeeId);
         Task<ICollection<Issue>?> GetIssuesByUpdatedDate(DateTime updatedFrom, DateTime updatedTo);
     }
 }

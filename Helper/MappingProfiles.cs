@@ -31,6 +31,8 @@ namespace AqbaServer.Helper
             CreateMap<Equipment, EquipmentDto>();
             CreateMap<UserDto, User>();
             CreateMap<User, UserDto>();
+            CreateMap<Employee, EmployeeDto>();
+            CreateMap<EmployeeDto, Employee>();
             CreateMap<StatusDto, Status>();
             CreateMap<Status, StatusDto>();
             CreateMap<PriorityDto, Priority>();
