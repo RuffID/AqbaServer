@@ -11,6 +11,7 @@ namespace AqbaServer.Interfaces.OkdeskPerformance
         Task<bool> CreateEmployee(Employee? employee);
         Task<ICollection<Employee>?> GetEmployees(int employeeId);
         Task<Employee?> GetEmployee(string? email);
+        Task<bool> GetEmployee(int employeeId);
         Task<ICollection<Employee>?> GetEmployees();
         Task<bool> GetEmployeesFromDBOkdesk();
     }

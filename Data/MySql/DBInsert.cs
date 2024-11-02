@@ -2,6 +2,7 @@ using AqbaServer.Helper;
 using AqbaServer.Models.Authorization;
 using AqbaServer.Models.OkdeskPerformance;
 using AqbaServer.Models.OkdeskReport;
+using AqbaServer.Models.WebHook;
 using MySql.Data.MySqlClient;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
@@ -71,7 +72,7 @@ namespace AqbaServer.Data.MySql
             }
             catch (Exception e)
             {
-                WriteLog.Error(e.ToString());
+                WriteLog.Error($"[Method: {nameof(InsertCompany)}] Company id: {company.Id} \n{e}");
                 return false;
             }
             finally
@@ -104,7 +105,7 @@ namespace AqbaServer.Data.MySql
             }
             catch (Exception e)
             {
-                WriteLog.Error(e.ToString());
+                WriteLog.Error($"[Method: {nameof(InsertMaintenanceEntity)}] Maintenance id: {maintenanceEntity.Id} \n{e}");
                 return false;
             }
             finally
@@ -141,7 +142,7 @@ namespace AqbaServer.Data.MySql
             }
             catch (Exception e)
             {
-                WriteLog.Error(e.ToString());
+                WriteLog.Error($"[Method: {nameof(InsertManufacturer)}] Manufacturer id: {manufacturer.Id} \n{e}");
                 return false;
             }
             finally
@@ -292,7 +293,7 @@ namespace AqbaServer.Data.MySql
             }
             catch (Exception e)
             {
-                WriteLog.Error(e.ToString());
+                WriteLog.Error($"[Method: {nameof(InsertEquipment)}] Equipment id: {equipment.Id} \n{e}");
                 return false;
             }
             finally

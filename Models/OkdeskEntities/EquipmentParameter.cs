@@ -13,11 +13,11 @@ namespace AqbaServer.Models.OkdeskPerformance
         [JsonProperty("name")]
         public string? Name { get; set; }
 
-        [JsonProperty("field_type")]
-        public string? FieldType { get; set; }
+        /*[JsonProperty("field_type")]
+        public string? FieldType { get; set; }*/
 
         [JsonProperty("value")]
-        public string? Value { get; set; }
+        public object? Value { get; set; }
 
         public KindParameter? KindParam { get; set; }
         public Equipment? Equipment { get; set; }

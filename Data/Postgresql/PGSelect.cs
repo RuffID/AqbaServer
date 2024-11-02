@@ -9,8 +9,8 @@ namespace AqbaServer.Data.Postgresql
 {
     public class PGSelect
     {
-        public static readonly long limit = 1000;
-        public static readonly long limitForEquipment = 500;
+        public static readonly long limit = 100;
+        public static readonly long limitForEquipment = 100;
 
         public static async Task<ICollection<Issue>?> SelectIssues(DateTime dateFrom, DateTime dateTo, long lastIssueId)
         {
@@ -683,7 +683,9 @@ namespace AqbaServer.Data.Postgresql
                             category.Name = reader["name"].ToString();
                         if (!reader.IsDBNull(reader.GetOrdinal("code")))
                             category.Code = reader["code"].ToString();
-                        
+                        if (!reader.IsDBNull(reader.GetOrdinal("color")))
+                            category.Code = reader["color"].ToString();
+
                         categories.Add(category);
                     }
                 }
@@ -862,6 +864,56 @@ namespace AqbaServer.Data.Postgresql
                     }
                 }
                 return kindParameters;
+            }
+            catch (Exception e)
+            {
+                WriteLog.Error(e.ToString());
+                return null;
+            }
+            finally
+            {
+                await cmd.DisposeAsync();
+                await connection.CloseAsync();
+                await connection.DisposeAsync();
+            }
+        }
+
+        public static async Task<ICollection<(string equipmentKindCode, string kindParameterCode)>?> SelectEquipmentKindParameters()
+        {
+            NpgsqlConnection connection = PGConfig.GetPsqlConnection();
+            NpgsqlCommand cmd = connection.CreateCommand();
+            try
+            {
+                await connection.OpenAsync();
+                ICollection<(string equipmentKindCode, string kindParameterCode)> equipment_kind_parameters = [];
+                string sqlCommand =
+                    "SELECT equipment_parameters.code AS equipmentKindCode, equipment_kinds.code AS kindParameterCode " +
+                    "FROM equipment_kinds " +
+                    "LEFT OUTER JOIN equipment_kind_parameters ON equipment_kinds.id = equipment_kind_parameters.equipment_kind_id " +
+                    "LEFT OUTER JOIN equipment_parameters ON equipment_kind_parameters.parameter_id = equipment_parameters.id; ";
+
+                cmd.Connection = connection;
+                cmd.CommandText = sqlCommand;
+
+                using DbDataReader reader = await cmd.ExecuteReaderAsync();
+                if (reader.HasRows)
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        string? equipmentKindCode = string.Empty;
+                        string? kindParameterCode = string.Empty;
+
+                        if (!reader.IsDBNull(reader.GetOrdinal("equipmentKindCode")))
+                            equipmentKindCode = reader["equipmentKindCode"].ToString();
+                        if (!reader.IsDBNull(reader.GetOrdinal("kindParameterCode")))
+                            kindParameterCode = reader["kindParameterCode"].ToString();
+
+                        if (string.IsNullOrEmpty(equipmentKindCode) || string.IsNullOrEmpty(kindParameterCode)) continue;
+
+                        equipment_kind_parameters.Add(new(equipmentKindCode, kindParameterCode));
+                    }
+                }
+                return equipment_kind_parameters;
             }
             catch (Exception e)
             {

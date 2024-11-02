@@ -1,7 +1,6 @@
 ﻿using AqbaServer.API;
 using AqbaServer.Data.MySql;
 using AqbaServer.Data.Postgresql;
-using AqbaServer.Helper;
 using AqbaServer.Interfaces.OkdeskPerformance;
 using AqbaServer.Models.OkdeskPerformance;
 

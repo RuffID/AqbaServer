@@ -4,7 +4,6 @@ using AqbaServer.Data.Postgresql;
 using AqbaServer.Helper;
 using AqbaServer.Interfaces.OkdeskEntities;
 using AqbaServer.Models.OkdeskPerformance;
-using AqbaServer.Models.OkdeskReport;
 
 namespace AqbaServer.Repository.OkdeskEntities
 {

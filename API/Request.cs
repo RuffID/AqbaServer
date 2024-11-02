@@ -4,8 +4,7 @@ using System.Net;
 using System.Text;
 using AqbaServer.Helper;
 using AqbaServer.Models.OkdeskReport;
-using AqbaServer.Dto;
-using System.ComponentModel.Design;
+using AqbaServer.Models.WebHook;
 
 namespace AqbaServer.API
 {
@@ -240,48 +239,6 @@ namespace AqbaServer.API
             }
 
             return issues;
-
-            /*StringBuilder linkOpenTasks = new();
-            int pageNumber;
-
-            foreach (var employee in employees.Where(e => e.Active))
-            {
-                employee.Issues = [];
-                pageNumber = 1;
-                while (true)
-                {
-                    linkOpenTasks.Clear();
-                    linkOpenTasks.Append($"{Immutable.OkdeskApiLink}/issues/list?api_token={Config.OkdeskApiToken}");
-
-                    linkOpenTasks.Append($"&assignee_ids[]={employee.Id}");
-                    linkOpenTasks.Append($"&page[number]={pageNumber}");
-                    linkOpenTasks.Append("&page[size]=50");
-                    linkOpenTasks.Append("&status_codes_not[]=completed"); // Код открытых заявок
-                    linkOpenTasks.Append("&status_codes_not[]=closed");   // Принятые заявки
-
-
-                    var responseOpen = await SendApiRequest(linkOpenTasks.ToString());
-                    if (!string.IsNullOrEmpty(responseOpen) && responseOpen != "[]")
-                    {
-                        try
-                        {
-                            Issue[]? list = JsonConvert.DeserializeObject<Issue[]>(responseOpen);                            
-
-                            if (list != null || list?.Length > 0)
-                            {
-                                employee.Issues.AddRange( list );
-                                pageNumber++;
-
-                                if (list?.Length < 50)
-                                    break;
-                            }                            
-                        }
-                        catch (Exception e) { WriteLog.Error(e.ToString()); break; }
-                    }
-                    else break;
-                }
-            }
-            return null;*/
         }
 
         public static async Task<IssueJSON?> GetIssue(int issueId)
@@ -521,6 +478,29 @@ namespace AqbaServer.API
             {
                 WriteLog.Warn(e.ToString());
                 return false;
+            }
+        }
+
+        public static async Task<string?> SendPostRequest(string? link, StringContent content)
+        {
+            try
+            {
+                using var response = await httpClient.PostAsync(link, content);
+
+                if (response.StatusCode == HttpStatusCode.Unauthorized)
+                    return null;
+                else if (response.StatusCode == HttpStatusCode.NotFound)
+                    return null;
+                else if (response.StatusCode == HttpStatusCode.BadRequest)
+                    return null;
+                else
+                    return await response.Content.ReadAsStringAsync();
+
+            }
+            catch (Exception e)
+            {
+                WriteLog.Warn(e.ToString());
+                return null;
             }
         }
 

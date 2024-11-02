@@ -5,6 +5,7 @@ using AqbaServer.Models.OkdeskPerformance;
 using AqbaServer.Interfaces.OkdeskEntities;
 using Microsoft.AspNetCore.Authorization;
 using AqbaServer.Models.Authorization;
+using AqbaServer.Models.WebHook;
 
 namespace AqbaServer.Controllers.OkdeskEntities
 {

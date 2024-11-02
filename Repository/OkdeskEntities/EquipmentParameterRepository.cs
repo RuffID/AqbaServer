@@ -8,8 +8,9 @@ namespace AqbaServer.Repository.OkdeskEntities
     {
         public async Task<bool> CreateEquipmentParameter(EquipmentParameter? equipmentParameter)
         {
-            if (equipmentParameter == null) return false;            
+            if (equipmentParameter == null) return false;
 
+            equipmentParameter.Value = Convert.ToString(equipmentParameter.Value) ?? null;
             return await DBInsert.InsertEquipmentParameter(equipmentParameter);
         }
 
@@ -31,7 +32,7 @@ namespace AqbaServer.Repository.OkdeskEntities
         public async Task<bool> UpdateEquipmentParameter(int equipmentParameterId, EquipmentParameter? equipmentParameter)
         {
             if (equipmentParameter == null) return false;
-
+            equipmentParameter.Value = Convert.ToString(equipmentParameter.Value) ?? null;
             return await DBUpdate.UpdateEquipmentParameter(equipmentParameterId, equipmentParameter);
         }
     }

@@ -13,5 +13,6 @@ namespace AqbaServer.Interfaces.OkdeskPerformance
         Task<bool> UpdateTimeEntry(TimeEntry? timeEntry);
         Task<bool> DeleteTimeEntryFromLocalDB(int timeEntryId);
         Task<double> GetTimeEntryByEmployeeId(DateTime dateFrom, DateTime dateTo, int employeeId);
+        Task<bool> SaveOrUpdateInDB(ICollection<TimeEntry>? timeEntries, int? issueId = null);
     }
 }

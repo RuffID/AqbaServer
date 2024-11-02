@@ -1,5 +1,4 @@
-﻿using AqbaServer.Controllers.OkdeskEntities;
-using AqbaServer.Helper;
+﻿using AqbaServer.Helper;
 using AqbaServer.Models.Authorization;
 using AqbaServer.Models.Server;
 using Microsoft.AspNetCore.Authorization;

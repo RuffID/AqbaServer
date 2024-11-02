@@ -1,5 +1,4 @@
-﻿using AqbaServer.Dto;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System.Text;
 
 namespace AqbaServer.Helper
@@ -10,6 +9,8 @@ namespace AqbaServer.Helper
         public static string OkdeskApiToken { get; set; } = string.Empty;
         [JsonProperty]
         public static string OkdeskDomainLink { get; set; } = string.Empty;
+        [JsonProperty]
+        public static string TelegramBotApiLink { get; set; } = string.Empty;
         [JsonProperty]
         public static string OkdeskLogin { get; set; } = string.Empty;
         [JsonProperty]
@@ -32,6 +33,12 @@ namespace AqbaServer.Helper
         public static string SMTPEmail { get; set; } = string.Empty;
         [JsonProperty]
         public static string SMTPPAssword { get; set; } = string.Empty;
+        [JsonProperty]
+        public static bool DebugModEnabled { get; set; } = false;
+        [JsonProperty]
+        public static long? TGSupportGroupChatId { get; set; } = null;
+        [JsonProperty]
+        public static long? TGDebugGroupChatId { get; set; } = null;
         [JsonIgnore]
         public static string Path { get; set; } = System.IO.Path.Combine("Config", "config.json");
 
@@ -45,6 +52,7 @@ namespace AqbaServer.Helper
         {
             OkdeskApiToken = configuration[nameof(OkdeskApiToken)] ?? string.Empty;
             OkdeskDomainLink = configuration[nameof(OkdeskDomainLink)] ?? string.Empty;
+            TelegramBotApiLink = configuration[nameof(TelegramBotApiLink)] ?? string.Empty;
             OkdeskLogin = configuration[nameof(OkdeskLogin)] ?? string.Empty;
             OkdeskPassword = configuration[nameof(OkdeskPassword)] ?? string.Empty;
             PartnersLogin = configuration[nameof(PartnersLogin)] ?? string.Empty;
@@ -56,6 +64,9 @@ namespace AqbaServer.Helper
             RefreshTokenLifeTimeFromDays = Convert.ToInt32(configuration[nameof(RefreshTokenLifeTimeFromDays)]);
             SMTPEmail = configuration[nameof(SMTPEmail)] ?? string.Empty;
             SMTPPAssword = configuration[nameof(SMTPPAssword)] ?? string.Empty;
+            DebugModEnabled = Convert.ToBoolean(configuration[nameof(DebugModEnabled)]);
+            TGSupportGroupChatId = Convert.ToInt64(configuration[nameof(TGSupportGroupChatId)]);
+            TGDebugGroupChatId = Convert.ToInt64(configuration[nameof(TGDebugGroupChatId)]);
         }
         
         public static async void CreateConfig(Config config, bool update)

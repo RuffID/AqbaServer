@@ -1,5 +1,4 @@
-﻿using AqbaServer.Dto;
-using AqbaServer.Models.OkdeskReport;
+﻿using AqbaServer.Models.OkdeskReport;
 
 namespace AqbaServer.Models.OkdeskPerformance
 {
@@ -11,8 +10,8 @@ namespace AqbaServer.Models.OkdeskPerformance
         public string? Title { get; set; }
         public DateTime? Employees_updated_at { get; set; }
         public DateTime? Created_at { get; set; }
-        public DateTime? Completed_at { get; set; }
         public DateTime? Deadline_at { get; set; }
+        public DateTime? Completed_at { get; set; }
         public DateTime? Delay_to { get; set; }
         public DateTime? Deleted_at { get; set; }
         public IssueType? Type { get; set; }

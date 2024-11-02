@@ -4,9 +4,11 @@ using AqbaServer.Interfaces.Authorization;
 using AqbaServer.Interfaces.OkdeskEntities;
 using AqbaServer.Interfaces.OkdeskPerformance;
 using AqbaServer.Interfaces.Service;
+using AqbaServer.Interfaces.WebHook;
 using AqbaServer.Repository.Authorization;
 using AqbaServer.Repository.OkdeskEntities;
 using AqbaServer.Repository.OkdeskPerformance;
+using AqbaServer.Repository.WebHook;
 using AqbaServer.Services;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -41,7 +43,11 @@ try
     builder.Services.AddScoped<IIssueTypeRepository, IssueTypeRepository>();
     builder.Services.AddScoped<IIssueRepository, IssueRepository>();
     builder.Services.AddScoped<ITimeEntryRepository, TimeEntryRepository>();
-    
+    builder.Services.AddScoped<IIssueWebHookRepository, IssueWebHookRepository>();
+    builder.Services.AddScoped<ICompanyWebHookRepository, CompanyWebHookRepository>();
+    builder.Services.AddScoped<IMaintenanceEntityWebHookRepository, MaintenanceEntityWebHookRepository>();
+    builder.Services.AddScoped<IEquipmentWebHookRepository, EquipmentWebHookRepository>();
+
     builder.Services.AddAuthentication().AddJwtBearer(options =>
         {
             options.TokenValidationParameters = new TokenValidationParameters
@@ -88,11 +94,11 @@ try
     builder.Configuration.AddJsonFile(Config.Path);
 
     builder.Services.AddHostedService<CheckLogFilesService>();
-    builder.Services.AddHostedService<LoginService>();
     builder.Services.AddHostedService<ThirtyMinutesReportService>();
     builder.Services.AddHostedService<UpdateDirectoriesService>();
     builder.Services.AddHostedService<OneDayReportService>();
     builder.Services.AddHostedService<WeekReportService>();
+    //builder.Services.AddHostedService<LoginService>();
 
     var app = builder.Build();
     Config.LoadConfig(app.Configuration);

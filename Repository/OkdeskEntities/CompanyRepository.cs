@@ -1,8 +1,11 @@
 ﻿using AqbaServer.API;
 using AqbaServer.Data.MySql;
 using AqbaServer.Data.Postgresql;
+using AqbaServer.Helper;
 using AqbaServer.Interfaces.OkdeskEntities;
 using AqbaServer.Models.OkdeskPerformance;
+using AqbaServer.Models.WebHook;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace AqbaServer.Repository.OkdeskEntities
 {
@@ -20,9 +23,19 @@ namespace AqbaServer.Repository.OkdeskEntities
 
         public async Task<bool> CreateCompany(string? categoryCode, Company? companyMap)
         {
-            if (string.IsNullOrEmpty(categoryCode) || companyMap == null) return false;
+            if (string.IsNullOrEmpty(categoryCode) || companyMap == null)
+            {
+                Console.WriteLine($"Method: {nameof(CreateCompany)}] Category code or company is null");
+                return false;
+            }
             var category = await _categoryRepository.GetCategory(categoryCode);
-            if (category == null) return false;
+
+            if (category == null)
+            {
+                Console.WriteLine($"Method: {nameof(CreateCompany)}] Unable to find category");
+                return false;
+            }
+
             return await DBInsert.InsertCompany(category.Id, companyMap);
         }
 
@@ -75,7 +88,11 @@ namespace AqbaServer.Repository.OkdeskEntities
         public async Task<bool> UpdateCompaniesFromAPIOkdesk(int lastCompanyId = 0, int pageSize = 100)
         {
             var categories = await _categoryRepository.GetCategories();
-            if (categories == null) return false;
+            if (categories == null)
+            {
+                WriteLog.Debug($"[Method: {nameof(UpdateCompaniesFromAPIOkdesk)}] Cannot get categories from DB");
+                return false;
+            }
             var companies = await OkdeskEntitiesRequest.GetCompanies(categories, pageSize, lastCompanyId);
 
             return await SaveOrUpdateInDB(companies);
@@ -101,32 +118,36 @@ namespace AqbaServer.Repository.OkdeskEntities
         
         async Task<bool> SaveOrUpdateInDB(ICollection<Company>? companies)
         {
-            if (companies == null || companies.Count <= 0) return false;
+            if (companies == null || companies.Count <= 0)
+            {
+                Console.WriteLine($"Method: {nameof(SaveOrUpdateInDB)}] Не удалось получить компании из API");
+                return false;
+            }
 
             foreach (var company in companies)
             {
                 var tempComp = await GetCompany(company.Id);
+
                 if (tempComp == null)
-                    if (!await CreateCompany(company?.Category?.Code, company))
+                {
+                    if (company.Category == null || string.IsNullOrEmpty(company.Category?.Code))
+                    {
+                        company.Category = new Category(0, "Без категории", color: "#FFFFFF", code: "no_category");
+                    }
+
+                    if (!await CreateCompany(company.Category.Code, company))
+                    {
+                        Console.WriteLine($"Method: {nameof(SaveOrUpdateInDB)}] Не удалось создать компанию {company?.Id}");
                         return false;
+                    }
+                }
 
                 if (tempComp != null)
-                    if (!await UpdateCompany(tempComp.Id, company))
-                        return false;
-
-                if (company?.Category != null && company.Category?.Id != 0)
                 {
-                    var category = await _categoryRepository.GetCategory(company.Category?.Code);
-
-                    if (category == null)
+                    if (!await UpdateCompany(tempComp.Id, company))
                     {
-                        if (!await _categoryRepository.CreateCategory(category))
-                            return false;
-                    }
-                    else
-                    {
-                        if (!await _categoryRepository.UpdateCategory(category?.Code, company.Category))
-                            return false;
+                        Console.WriteLine($"Method: {nameof(SaveOrUpdateInDB)}] Не удалось обновить компанию {company?.Id}");
+                        return false;                
                     }
                 }
             }

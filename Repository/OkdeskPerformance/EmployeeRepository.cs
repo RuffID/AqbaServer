@@ -79,6 +79,14 @@ namespace AqbaServer.Repository.OkdeskPerformance
             return await DBSelect.SelectEmployee(email);
         }
 
+        public async Task<bool> GetEmployee(int employeeId) 
+        {
+            if (employeeId == 0) return false;
+            var employee = await DBSelect.SelectEmployee(employeeId);
+            return employee != null;
+        }
+
+
         public async Task<bool> GetEmployeesFromDBOkdesk()
         {
             var employees = await PGSelect.SelectEmployees();

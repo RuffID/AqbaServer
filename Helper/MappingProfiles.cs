@@ -3,6 +3,7 @@ using AqbaServer.Models;
 using AqbaServer.Models.Authorization;
 using AqbaServer.Models.OkdeskPerformance;
 using AqbaServer.Models.OkdeskReport;
+using AqbaServer.Models.WebHook;
 using AutoMapper;
 
 namespace AqbaServer.Helper

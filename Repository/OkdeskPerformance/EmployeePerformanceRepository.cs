@@ -2,6 +2,7 @@
 using AqbaServer.Dto;
 using AqbaServer.Interfaces.OkdeskPerformance;
 using AqbaServer.Services;
+using AqbaServer.Helper;
 
 namespace AqbaServer.Repository.OkdeskPerformance
 {
@@ -28,19 +29,23 @@ namespace AqbaServer.Repository.OkdeskPerformance
             // Получение списка сотрудников из локальной БД
             ICollection<Employee>? employees = await _employeeRepository.GetEmployees();
 
-            if (employees == null || employees.Count <= 0) return false;
+            if (employees == null || employees.Count <= 0)
+            {
+                WriteLog.Error($"[Method: {nameof(UpdatePerformanceFromOkdeskAPI)}] Не удалось получить список сотрудников из локальной БД");
+                return false;
+            }
 
             // Парсинг всех обновлённых заявок за выбранный период, но только для неудалённых учётных записей сотрудников с окдеска
             foreach(var employee in employees.Where(e => e.Active))
                 await UpdateIssuesFromOkdeskAPI(issues, dateFrom, dateTo, employee.Id);
 
             // Поиск удалённых заявок
-            await SearchForDeletedIssues(issues, dateFrom, dateTo);
+            //await SearchForDeletedIssues(issues, dateFrom, dateTo);
 
             // Получение списанного времени
             await UpdateSpentTimeFromOkdeskAPI(issues);
 
-            Helper.Immutable.UpdateTime = DateTime.Now;
+            Immutable.UpdateTime = DateTime.Now;
             return true;
         }        
 
@@ -84,7 +89,7 @@ namespace AqbaServer.Repository.OkdeskPerformance
             {
                 // Таймаут дабы не было спама запросов т.к. заявок может быть до нескольких сотен
                 await Task.Delay(200);
-                // Получение всех записей списания времени с окдеска по id заявки
+                // Получение всех записей списания времени с окдеска по id заявки и их запись/обновление
                 var timeEntriesFromOkdesk = await _timeEntryRepository.GetTimeEntriesFromOkdesk(issue.Id);
 
                 // Получение всех записей сохранённых в локальной БД сервера
@@ -95,7 +100,7 @@ namespace AqbaServer.Repository.OkdeskPerformance
                 // Прохоидит циклом по каждой записи из БД сервера для поиска удалённых в окдеске записей списанного времени
                 foreach (var entryFromLocalDB in timeEntriesFromLocalDB)
                 {
-                    // Если запись из локальной БД есть в записях полученных из API, то цикл цикл прерывается и идёт по новой
+                    // Если запись из локальной БД есть в записях полученных из API, то проверяется следующая запись
                     if (timeEntriesFromOkdesk.Time_entries.Any(te => te.Id == entryFromLocalDB.Id)) continue;
 
                     // Если запись отсутствует среди записей полученных с API окдеска, то значит она была удалена в окдеске и её нужно удалить и в локальной БД
@@ -104,7 +109,7 @@ namespace AqbaServer.Repository.OkdeskPerformance
             }
         }
 
-        async Task SearchForDeletedIssues(ICollection<Issue> issuesFromOkdeskAPI, DateTime updatedSinceFrom, DateTime updatedUntilTo)
+        /*async Task SearchForDeletedIssues(ICollection<Issue> issuesFromOkdeskAPI, DateTime updatedSinceFrom, DateTime updatedUntilTo)
         {
             ICollection<Issue>? issuesFromLocalDB = await _issueRepository.GetIssuesByUpdatedDate(updatedSinceFrom, updatedUntilTo);
 
@@ -135,7 +140,7 @@ namespace AqbaServer.Repository.OkdeskPerformance
                     await _issueRepository.UpdateIssue(issue);
                 }
             }
-        }
+        }*/
 
         static List<EmployeeDto> ConvertEmployeeToEmployeeDto(ICollection<Employee> employees)
         {

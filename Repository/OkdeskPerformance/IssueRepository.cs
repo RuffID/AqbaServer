@@ -1,6 +1,7 @@
 ﻿using AqbaServer.API;
 using AqbaServer.Data.MySql;
 using AqbaServer.Data.Postgresql;
+using AqbaServer.Helper;
 using AqbaServer.Interfaces.OkdeskEntities;
 using AqbaServer.Interfaces.OkdeskPerformance;
 using AqbaServer.Models.OkdeskPerformance;
@@ -15,18 +16,22 @@ namespace AqbaServer.Repository.OkdeskPerformance
         private readonly IIssueTypeRepository _typeRepository;
         private readonly ICompanyRepository _companyRepository;
         private readonly IMaintenanceEntityRepository _maintenanceEntityRepository;
+        private readonly IEmployeeRepository _employeeRepository;
 
-        public IssueRepository(IIssueTypeRepository issueTypeRepository, IIssueStatusRepository issueStatusRepository, IIssuePriorityRepository issuePriorityRepository, ICompanyRepository companyRepository, IMaintenanceEntityRepository maintenanceEntityRepository) 
+        public IssueRepository(IIssueTypeRepository issueTypeRepository, IIssueStatusRepository issueStatusRepository, IIssuePriorityRepository issuePriorityRepository, ICompanyRepository companyRepository, IMaintenanceEntityRepository maintenanceEntityRepository, IEmployeeRepository employeeRepository) 
         {
             _priorityRepository = issuePriorityRepository;
             _statusRepository = issueStatusRepository;
             _typeRepository = issueTypeRepository;
             _companyRepository = companyRepository;
             _maintenanceEntityRepository = maintenanceEntityRepository;
+            _employeeRepository = employeeRepository;
         }
 
-        public async Task<bool> UpdateIssue(Issue issue)
+        public async Task<bool> UpdateIssue(Issue? issue)
         {
+            if (issue == null) return false;
+
             if (await CheckIssue(issue))
                 return await DBUpdate.UpdateIssue(issue);
             else return false;
@@ -44,10 +49,10 @@ namespace AqbaServer.Repository.OkdeskPerformance
             return await DBSelect.SelectIssue(issueId);
         }
 
-        public async Task<IssueJSON?> GetIssueFromOkdesk(int issueId)
+        /*public async Task<IssueJSON?> GetIssueFromOkdesk(int issueId)
         {
             return await Request.GetIssue(issueId);
-        }
+        }*/
 
         public async Task<ICollection<Issue>?> GetIssuesByUpdatedDate(DateTime updatedFrom, DateTime updatedTo)
         {
@@ -100,6 +105,8 @@ namespace AqbaServer.Repository.OkdeskPerformance
                     #endif
                     break;
                 }
+                // Небольшая задержка для более плавной нагрузки сервера
+                await Task.Delay(200);
             }
             return true;
         }        
@@ -134,6 +141,12 @@ namespace AqbaServer.Repository.OkdeskPerformance
                 company = await _companyRepository.GetCompany(issue.Company.Id);
             if (issue.Service_object != null)
                 maintenanceEntity = await _maintenanceEntityRepository.GetMaintenanceEntity(issue.Service_object.Id);
+            // Проверка ответственного в заявке т.к. могут завести нового сотрудника, а в базу он ещё не попал и из за этого возникают ошибки
+            if (issue.Assignee_id != null)
+            {
+                if (!await _employeeRepository.GetEmployee((int)issue.Assignee_id))
+                    await _employeeRepository.UpdateEmployeesFromAPIOkdesk();
+            }
 
             issue.Status = status;
             issue.Priority = priority;
@@ -144,7 +157,7 @@ namespace AqbaServer.Repository.OkdeskPerformance
             return true;
         }
 
-        async Task<bool> SaveOrUpdateInDB(ICollection<Issue>? issues)
+        public async Task<bool> SaveOrUpdateInDB(ICollection<Issue>? issues)
         {
             if (issues != null && issues.Count > 0)
             {
@@ -155,12 +168,18 @@ namespace AqbaServer.Repository.OkdeskPerformance
                     if (tempIssue == null)
                     {
                         if (!await CreateIssue(issue))
+                        {
+                            WriteLog.Debug($"Не удалось создать заявку {issue.Id}");
                             return false;
+                        }
                     }
                     else if (tempIssue != null)
                     {
                         if (!await UpdateIssue(issue))
+                        {
+                            WriteLog.Debug($"Не удалось обновить заявку {issue.Id}");
                             return false;
+                        }
                     }
                 }
             }

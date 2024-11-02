@@ -23,8 +23,11 @@ namespace AqbaServer.Services
                         IEmployeePerformanceRepository employeePerformanceRepository =
                             scope.ServiceProvider.GetRequiredService<IEmployeePerformanceRepository>();
 
+                        DateTime now = DateTime.Now;
+                        DateTime dateTo = new(now.Year, now.Month, now.Day, hour: 23, minute: 59, second: 59);
+
                         if (TimeOfLastUpdateRequest.AddMinutes(timeout + 1) > DateTime.Now)
-                            await employeePerformanceRepository.UpdatePerformanceFromOkdeskAPI(DateTime.Now.AddMinutes(-35), DateTime.Now);
+                            await employeePerformanceRepository.UpdatePerformanceFromOkdeskAPI(now.AddMinutes(-35), dateTo);
                     }
 
                     TimeSpan remaining = TimeOfLastUpdateRequest.AddMinutes(timeout) - DateTime.Now;

@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using AqbaServer.API;
+using System.Collections.Concurrent;
 
 namespace AqbaServer.Helper
 {
@@ -19,6 +20,15 @@ namespace AqbaServer.Helper
             sw = new(Path.Combine(logsDir, GetFileName(DateTime.Now)), true);
         }
 
+        public static async void Debug(string data)
+        {
+            if (Config.DebugModEnabled)
+            {
+                await TelegramNotification.SendMessage(Config.TGDebugGroupChatId, data);
+                //AddToQueue(data, " DEBUG");
+            }
+        }
+
         public static void Info(string data)
         {
             AddToQueue(data, " INFO");
@@ -29,9 +39,10 @@ namespace AqbaServer.Helper
             AddToQueue(data, " WARN");
         }
 
-        public static void Error(string data)
+        public static async void Error(string data)
         {
             Immutable.Errors++;
+            await TelegramNotification.SendMessage(Config.TGDebugGroupChatId, data);
             AddToQueue(data, " ERROR");
         }
 

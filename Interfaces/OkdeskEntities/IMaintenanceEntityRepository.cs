@@ -1,4 +1,5 @@
 ﻿using AqbaServer.Models.OkdeskPerformance;
+using AqbaServer.Models.WebHook;
 
 namespace AqbaServer.Interfaces.OkdeskEntities
 {

@@ -68,7 +68,7 @@ namespace AqbaServer.Controllers.OkdeskEntities
                     DateTime today = new (DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 0, 0, 0);
 
                     if (dateTo >= today)
-                        _ = _employeePerformanceRepository.UpdatePerformanceFromOkdeskAPI(ThirtyMinutesReportService.TimeOfLastUpdateRequest.AddMinutes(-10), DateTime.Now);                    
+                        _ = _employeePerformanceRepository.UpdatePerformanceFromOkdeskAPI(ThirtyMinutesReportService.TimeOfLastUpdateRequest.AddMinutes(-30), DateTime.Now);
                 }
             }
 

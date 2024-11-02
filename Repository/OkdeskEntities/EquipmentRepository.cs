@@ -158,7 +158,8 @@ namespace AqbaServer.Repository.OkdeskEntities
                     {
                         foreach (var param in equipment.Parameters)
                         {
-                            if (string.IsNullOrEmpty(param.Value)) continue;
+                            // Если параметр пустой, то его нет смысла сохранять, пропуск итерации
+                            if (string.IsNullOrEmpty(Convert.ToString(param.Value))) continue;
 
                             var tempKindParam = await _kindParameterRepository.GetKindParameter(param.Code);
                             if (tempKindParam == null) continue;

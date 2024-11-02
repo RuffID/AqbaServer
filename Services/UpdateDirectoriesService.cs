@@ -15,14 +15,14 @@ namespace AqbaServer.Services
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                WriteLog.Info("Инициализировано обновление справочников...");
+                WriteLog.Debug("Инициализировано обновление справочников...");
 
                 await UpdateEmployeeRoles();
                 await UpdateEmployees();                
                 await UpdateEmployeeGroups();
                 await UpdateEmployeeGroupsConnect();
-                await UpdateKindParameters();
                 await UpdateKinds();
+                await UpdateKindParameters();
                 await UpdateManufacturerers();
                 await UpdateModels();
                 await UpdateCategories();
@@ -33,9 +33,9 @@ namespace AqbaServer.Services
                 await UpdateTimeEntries();
                 await UpdateEquipments();
 
-                WriteLog.Info("Обновление справочников успешно завершено!");
+                WriteLog.Debug("Обновление справочников успешно завершено!");
 
-                TimeSpan remaining = DateTime.Now.AddHours(6) - DateTime.Now;
+                TimeSpan remaining = DateTime.Now.AddHours(3) - DateTime.Now;
                 await Task.Delay(remaining, stoppingToken);
             }
         }
@@ -75,7 +75,8 @@ namespace AqbaServer.Services
             using IServiceScope scope = serviceScopeFactory.CreateScope();
             IKindParameterRepository kindParameterRepository = scope.ServiceProvider.GetRequiredService<IKindParameterRepository>();
             // Обновление через обычное API, а не через SQL API т.к. в во втором пока что нет возможности получить связи между kind и kind_parameters
-            await kindParameterRepository.UpdateKindParametersFromAPIOkdesk();
+            // Сделал через SQL API, добавили нужную таблицу! 02.11.2024
+            await kindParameterRepository.UpdateKindParametersFromDBOkdesk();
         }
 
         async Task UpdateKinds()

@@ -46,7 +46,7 @@ namespace AqbaServer.Data.MySql
             }
         }
 
-        public static async Task<bool> UpdateCategoryWithoutColor(string categoryCode, Category category)
+        /*public static async Task<bool> UpdateCategoryWithoutColor(string categoryCode, Category category)
         {
             MySqlConnection connection = DBConfig.GetDBConnection();
             MySqlCommand cmd = connection.CreateCommand();
@@ -81,7 +81,7 @@ namespace AqbaServer.Data.MySql
                 await connection.CloseAsync();
                 await connection.DisposeAsync();
             }
-        }
+        }*/
 
         public static async Task<bool> UpdateCompany(int companyId, Company company)
         {
@@ -112,7 +112,7 @@ namespace AqbaServer.Data.MySql
             }
             catch (Exception e)
             {
-                WriteLog.Error(e.ToString());
+                WriteLog.Error($"[Method: {nameof(UpdateCompany)}] Company id: {company.Id} \n{e}");
                 return false;
             }
             finally
@@ -150,7 +150,7 @@ namespace AqbaServer.Data.MySql
             }
             catch (Exception e)
             {
-                WriteLog.Error(e.ToString());
+                WriteLog.Error($"[Method: {nameof(UpdateMaintenanceEntity)}] Maintenance id: {maintenanceEntityId} \n{e}");
                 return false;
             }
             finally
@@ -380,7 +380,7 @@ namespace AqbaServer.Data.MySql
             }
             catch (Exception e)
             {
-                WriteLog.Error(e.ToString());
+                WriteLog.Error($"[Method: {nameof(UpdateEquipment)}] Equipment id: {equipmentId} \n{e}");
                 return false;
             }
             finally

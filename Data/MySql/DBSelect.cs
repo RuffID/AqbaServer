@@ -2,6 +2,7 @@ using AqbaServer.Helper;
 using AqbaServer.Models.Authorization;
 using AqbaServer.Models.OkdeskPerformance;
 using AqbaServer.Models.OkdeskReport;
+using AqbaServer.Models.WebHook;
 using MySql.Data.MySqlClient;
 using System.Data.Common;
 
@@ -1536,8 +1537,8 @@ namespace AqbaServer.Data.MySql
                         if (!reader.IsDBNull(reader.GetOrdinal("code")))
                             parameter.Code = reader["code"].ToString();
 
-                        if (!reader.IsDBNull(reader.GetOrdinal("fieldType")))
-                            parameter.FieldType = reader["fieldType"].ToString();
+                        /*if (!reader.IsDBNull(reader.GetOrdinal("fieldType")))
+                            parameter.FieldType = reader["fieldType"].ToString();*/
 
                         equipmentParameters.Add(parameter);
                     }

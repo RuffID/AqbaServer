@@ -36,12 +36,12 @@ namespace AqbaServer.Repository.OkdeskEntities
             return await DBUpdate.UpdateCategory(categoryCode, category);
         }
 
-        public async Task<bool> UpdateCategoryWithoutColor(string? categoryCode, Category? category)
+        /*public async Task<bool> UpdateCategoryWithoutColor(string? categoryCode, Category? category)
         {
             // Это обновление необходимо т.к. из API окдеска категории приходят с полем color, а из SQL API без него
             if (string.IsNullOrEmpty(categoryCode) || category == null) return false;
             return await DBUpdate.UpdateCategoryWithoutColor(categoryCode, category);
-        }
+        }*/
 
         public async Task<bool> DeleteCategory(string? categoryCode)
         {
@@ -75,7 +75,8 @@ namespace AqbaServer.Repository.OkdeskEntities
                 }
                 else if (tempCat != null)
                 {
-                    if (!await UpdateCategoryWithoutColor(tempCat.Code, category))
+                    //if (!await UpdateCategoryWithoutColor(tempCat.Code, category))
+                    if (!await UpdateCategory(tempCat.Code, category))
                         return false;
                 }
             }

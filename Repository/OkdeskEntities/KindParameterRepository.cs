@@ -34,9 +34,28 @@ namespace AqbaServer.Repository.OkdeskEntities
 
         public async Task<bool> UpdateKindParametersFromDBOkdesk()
         {
+            // Обновление непосредственно kind parameters
             var kindParameters = await PGSelect.SelectEquipmentParameters();
+            if (!await SaveOrUpdateInDB(kindParameters)) return false;
 
-            return await SaveOrUpdateInDB(kindParameters);
+            // Обновление связей между kind и их parameters
+            var equipmentKindParameters = await PGSelect.SelectEquipmentKindParameters();
+            if (equipmentKindParameters == null || equipmentKindParameters.Count < 0) return false;
+
+            foreach (var item in equipmentKindParameters)
+            {
+                var kindParameter = await GetKindParameter(item.equipmentKindCode);
+                if (kindParameter == null) continue;
+
+                var kind = await _kindRepository.GetKind(item.kindParameterCode);
+                // Проверка на всякий случай
+                if (kind == null) continue;
+
+                if (await _kindParamRepository.GetKindParam(kind.Id, kindParameter.Id) == false)
+                    if (!await _kindParamRepository.CreateKindParam(kind.Id, kindParameter.Id))
+                        return false;
+            }
+            return true;
         }
 
         public async Task<bool> UpdateKindParametersFromAPIOkdesk()
