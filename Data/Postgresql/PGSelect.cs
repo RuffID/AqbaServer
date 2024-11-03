@@ -684,7 +684,7 @@ namespace AqbaServer.Data.Postgresql
                         if (!reader.IsDBNull(reader.GetOrdinal("code")))
                             category.Code = reader["code"].ToString();
                         if (!reader.IsDBNull(reader.GetOrdinal("color")))
-                            category.Code = reader["color"].ToString();
+                            category.Color = reader["color"].ToString();
 
                         categories.Add(category);
                     }
